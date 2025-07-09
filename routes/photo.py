@@ -59,11 +59,10 @@ async def upload_photo(
 
 # ✅ Get all photos in a group
 @router.get("/group/{group_id}", response_model=list[PhotoOut])
-def get_group_photos(
-    group_id: int = Path(..., gt=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def get_group_photos( group_id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    is_group = db.query(Group).filter(Group.id == group_id).first()
+    if not is_group:
+        raise HTTPException(status_code=404, detail="Group not found")
     # Ensure user is a member
     is_member = db.query(GroupMember).filter_by(
         user_id=current_user.id,

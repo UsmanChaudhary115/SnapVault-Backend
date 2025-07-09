@@ -13,5 +13,6 @@ class Group(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     creator = relationship("User", back_populates="created_groups")
-    members = relationship("GroupMember", back_populates="group")
-    photos = relationship("Photo", back_populates="group")
+    members = relationship("GroupMember", back_populates="group") 
+    photos = relationship("Photo", back_populates="group", cascade="all, delete-orphan")
+

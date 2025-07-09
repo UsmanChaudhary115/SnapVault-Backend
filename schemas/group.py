@@ -15,5 +15,8 @@ class GroupOut(BaseModel):
     created_at: datetime
     creator: UserOut
 
-    class Config:
-        from_attributes = True  # Pydantic v2 equivalent of orm_mode
+class GroupUpdate(BaseModel):
+    name: str
+
+class Config:
+    from_attributes = True  

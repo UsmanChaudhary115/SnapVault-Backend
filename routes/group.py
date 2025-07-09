@@ -54,7 +54,7 @@ def join_group(join: GroupJoin, db: Session = Depends(get_db), current_user: Use
     db.commit()
     return {"message": f"Joined group '{group.name}' successfully."}
 
-    # List groups the current user has joined
+# List groups the current user has joined
 @router.get("/my", response_model=list[GroupOut])
 def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     member_entries = db.query(GroupMember).filter_by(user_id=current_user.id).all()
@@ -62,6 +62,7 @@ def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(ge
     groups = db.query(Group).filter(Group.id.in_(group_ids)).all()
     return groups
 
+# ✅ Get Group Details you are a member of
 @router.get("/{id}", response_model=GroupOut)
 def get_group(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()

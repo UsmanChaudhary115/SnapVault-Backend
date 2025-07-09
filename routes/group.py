@@ -8,7 +8,7 @@ from schemas.group import GroupCreate, GroupJoin, GroupOut
 from utils.auth_utils import get_current_user
 from models.user import User
 
-router = APIRouter(prefix="/groups", tags=["Groups"])
+router = APIRouter()
  
 def generate_invite_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
@@ -54,7 +54,7 @@ def join_group(join: GroupJoin, db: Session = Depends(get_db), current_user: Use
     db.commit()
     return {"message": f"Joined group '{group.name}' successfully."}
 
-    # ✅ List groups the current user has joined
+    # List groups the current user has joined
 @router.get("/my", response_model=list[GroupOut])
 def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     member_entries = db.query(GroupMember).filter_by(user_id=current_user.id).all()
@@ -62,21 +62,8 @@ def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(ge
     groups = db.query(Group).filter(Group.id.in_(group_ids)).all()
     return groups
 
-
-# ✅ Get group details by ID
-# @router.get("/{id}", response_model=GroupOut)
-# def get_group(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-#     group = db.query(Group).filter(Group.id == id).first()
-#     if not group:
-#         raise HTTPException(status_code=404, detail="Group not found")
-#     return group
-
 @router.get("/{id}", response_model=GroupOut)
-def get_group(
-    id: int = Path(..., gt=0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
+def get_group(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")

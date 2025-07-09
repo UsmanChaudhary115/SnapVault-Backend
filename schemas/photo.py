@@ -7,5 +7,5 @@ class PhotoOut(BaseModel):
     file_path: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+class Config:
+    from_attributes = True

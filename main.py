@@ -12,3 +12,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(group.router, prefix="/groups", tags=["Groups"])  # 👈 Add this line
 app.include_router(photo.router, prefix="/photos", tags=["Photos"])  # 👈 Add this line
 
+@app.get("/")
+async def root():
+    return {"message": "Welcome to SnapVault!"}
+

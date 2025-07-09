@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
-from schemas.user import UserCreate, UserLogin, UserOut
+from schemas.user import UserCreate, UserLogin, UserOut, PasswordUpdate
 from utils.hash import hash_password, verify_password
 from utils.jwt import create_access_token
 from utils.auth_utils import get_current_user
+from passlib.context import CryptContext
 
 router = APIRouter()
 @router.put("/bio/{updatedBio}", response_model=UserOut)
@@ -44,3 +45,34 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     
     token = create_access_token({"sub": db_user.email})
     return {"access_token": token, "token_type": "bearer"}
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+@router.put("/update-password")
+def update_password(
+    data: PasswordUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+        # 1. Check if current password is correct
+        if not pwd_context.verify(data.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+
+        # 2. Prevent reuse of old password
+        if pwd_context.verify(data.new_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from the current password"
+            )
+ 
+
+        # 3b. Hash and update
+        hashed_new_password = pwd_context.hash(data.new_password)
+        current_user.hashed_password = hashed_new_password
+        db.commit()
+        db.refresh(current_user)
+
+        return {"message": "Password updated successfully"}

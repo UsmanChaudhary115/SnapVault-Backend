@@ -10,7 +10,7 @@ from schemas.photo import PhotoOut
 import uuid
 import os
 
-router = APIRouter(prefix="/photos", tags=["Photos"])
+router = APIRouter()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)  # Make sure directory exists

@@ -17,6 +17,10 @@ class UserOut(BaseModel):
     email: str
     bio: Optional[str]
     created_at: datetime
+ 
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
 
-    class Config:
-        orm_mode = True
+class Config:
+    from_attributes = True

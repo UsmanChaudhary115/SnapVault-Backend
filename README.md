@@ -20,13 +20,13 @@ This repository contains the **FastAPI**-powered backend that handles authentica
 
 ## ⚒️ Tech Stack
 
-| Layer        | Tech                     |
-|--------------|--------------------------|
-| Backend      | FastAPI (Python 3.10+)   |
-| Database     | SQLite / PostgreSQL      |
-| ORM          | SQLAlchemy               |
-| Auth         | JWT + OAuth2 Password    |
-| Facial Recog | InsightFace (planned)    |
+| Layer        | Tech                   |
+| ------------ | ---------------------- |
+| Backend      | FastAPI (Python 3.10+) |
+| Database     | SQLite / PostgreSQL    |
+| ORM          | SQLAlchemy             |
+| Auth         | JWT + OAuth2 Password  |
+| Facial Recog | InsightFace (planned)  |
 
 ---
 
@@ -63,7 +63,7 @@ SnapVault-Backend/
 └── README.md
 ```
 
-> ⚠️ **Note:**  
+> ⚠️ **Note:**\
 > `routes/testing.py` is for internal testing only and **should not be included** in production or active development deployments.
 
 ---
@@ -71,12 +71,14 @@ SnapVault-Backend/
 ## 🔧 Environment Setup
 
 ### 1. Clone the repo
+
 ```bash
 git clone https://github.com/UsmanChaudhary115/SnapVault-Backend.git
 cd SnapVault-Backend
 ```
 
 ### 2. Create a virtual environment
+
 ```bash
 python -m venv venv
 venv\Scripts\activate     # Windows  
@@ -84,16 +86,19 @@ source venv/bin/activate  # macOS/Linux
 ```
 
 ### 3. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 > **Tip:** If `requirements.txt` is missing:
+
 ```bash
 pip install fastapi uvicorn sqlalchemy pydantic passlib[bcrypt] python-jose[cryptography]
 ```
 
 ### 4. Run the app
+
 ```bash
 uvicorn main:app --reload
 ```
@@ -108,22 +113,46 @@ uvicorn main:app --reload
 
 ---
 
-## 📬 API Endpoints (Selected)
+## 📬 API Endpoints
 
-| Method | Endpoint                    | Description                     |
-|--------|-----------------------------|---------------------------------|
-| POST   | `/auth/register`            | Register a new user             |
-| POST   | `/auth/login`               | Log in and get JWT token        |
-| GET    | `/auth/me`                  | Get current user info           |
-| PUT    | `/auth/update-password`     | Update password                 |
-| POST   | `/groups/create`            | Create a new group              |
-| POST   | `/groups/join`              | Join a group using invite code  |
-| GET    | `/groups/my`                | Get my joined groups            |
-| GET    | `/groups/{id}`              | Get group details               |
-| GET    | `/groups/{id}/members`      | List group members              |
-| DELETE | `/groups/{id}`              | Delete a group (admin only)     |
-| DELETE | `/groups/{id}/leave`        | Leave a group                   |
-| PUT    | `/groups/{id}`              | Update group name/description   |
+### 🔐 Auth
+| Method | Endpoint                       | Description        |
+|--------|--------------------------------|--------------------|
+| PUT    | `/auth/bio/{updatedBio}`       | Update Bio         |
+| GET    | `/auth/me`                     | Read Current User  |
+| POST   | `/auth/register`               | Register           |
+| POST   | `/auth/login`                  | Login              |
+| PUT    | `/auth/update-password`        | Update Password    |
+
+### 👥 Groups
+| Method | Endpoint                       | Description         |
+|--------|--------------------------------|---------------------|
+| POST   | `/groups/create`               | Create Group        |
+| POST   | `/groups/join`                 | Join Group          |
+| GET    | `/groups/my`                   | Get My Groups       |
+| GET    | `/groups/{id}`                 | Get Group           |
+| DELETE | `/groups/{id}`                 | Delete Group        |
+| PUT    | `/groups/{id}`                 | Update Group        |
+| GET    | `/groups/{id}/members`         | Get Group Members   |
+| DELETE | `/groups/{id}/leave`           | Leave Group         |
+
+### 🖼️ Photos
+| Method | Endpoint                        | Description         |
+|--------|----------------------------------|---------------------|
+| POST   | `/photos/upload`                | Upload Photo        |
+| GET    | `/photos/group/{group_id}`      | Get Group Photos    |
+| GET    | `/photos/{photo_id}`            | Get Photo           |
+
+### 🧪 Testing (for dev only)
+| Method | Endpoint                        | Description         |
+|--------|----------------------------------|---------------------|
+| GET    | `/testingallGroups`             | Get All Groups      |
+| GET    | `/testing/allAppUsers`          | Get All Users       |
+
+### 🌐 Default
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET    | `/`      | Root        |
 
 ---
 

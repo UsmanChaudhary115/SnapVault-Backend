@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
+from models.revoked_token import RevokedToken
 from schemas.user import UserCreate, UserLogin, UserOut, PasswordUpdate
 from utils.hash import hash_password, verify_password
 from utils.jwt import create_access_token
@@ -16,7 +17,7 @@ def update_bio(updatedBio: str, db: Session = Depends(get_db), current_user: Use
     db.refresh(current_user) 
     return current_user
 
-@router.get("/me", response_model=UserOut)
+@router.get("/profile", response_model=UserOut)
 def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
@@ -76,3 +77,22 @@ def update_password(
         db.refresh(current_user)
 
         return {"message": "Password updated successfully"}
+
+
+@router.post("/logout")
+def logout(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Invalid token header")
+
+
+    # Check if token already revoked
+    if db.query(RevokedToken).filter_by(token=auth_header).first():
+        raise HTTPException(status_code=400, detail="Token already revoked")
+
+    # Save token in revoked table
+    db.add(RevokedToken(token=auth_header))
+    db.commit()
+
+    return {"message": "Logged out successfully"}

@@ -17,4 +17,4 @@ class User(Base):
     created_groups = relationship("Group", back_populates="creator")
     joined_groups = relationship("GroupMember", back_populates="user")
     uploaded_photos = relationship("Photo", back_populates="uploader")
-    faces_in_photos = relationship("PhotoFace", back_populates="user")
+    faces = relationship("Face", back_populates="user")

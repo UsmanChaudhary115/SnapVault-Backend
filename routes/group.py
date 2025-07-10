@@ -58,11 +58,13 @@ def join_group(join: GroupJoin, db: Session = Depends(get_db), current_user: Use
 @router.get("/my", response_model=list[GroupOut])
 def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     member_entries = db.query(GroupMember).filter_by(user_id=current_user.id).all()
+    if not member_entries:
+        raise HTTPException(status_code=404, detail="You are not a member of any groups")
     group_ids = [entry.group_id for entry in member_entries]
     groups = db.query(Group).filter(Group.id.in_(group_ids)).all()
     return groups
 
-# ✅ Get Group Details you are a member of
+# ✅ Get Group Deta ils you are a member of
 @router.get("/{id}", response_model=GroupOut)
 def get_group(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()

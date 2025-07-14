@@ -13,8 +13,7 @@ router = APIRouter()
 def generate_invite_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
-
-# ✅ Create Group
+ 
 @router.post("/create", response_model=GroupOut)
 def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     invite_code = generate_invite_code()
@@ -30,7 +29,7 @@ def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user
     db.commit()
     db.refresh(new_group)
 
-    # Also add creator as member
+ 
     member = GroupMember(user_id=current_user.id, group_id=new_group.id)
     db.add(member)
     db.commit()
@@ -38,14 +37,14 @@ def create_group(group: GroupCreate, db: Session = Depends(get_db), current_user
     return new_group
 
 
-# ✅ Join Group
+ 
 @router.post("/join")
 def join_group(join: GroupJoin, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.invite_code == join.invite_code).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # Prevent double joining
+ 
     already_joined = db.query(GroupMember).filter_by(user_id=current_user.id, group_id=group.id).first()
     if already_joined:
         raise HTTPException(status_code=400, detail="You already joined this group")
@@ -54,7 +53,7 @@ def join_group(join: GroupJoin, db: Session = Depends(get_db), current_user: Use
     db.commit()
     return {"message": f"Joined group '{group.name}' successfully."}
 
-# List groups the current user has joined
+ 
 @router.get("/my", response_model=list[GroupOut])
 def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     member_entries = db.query(GroupMember).filter_by(user_id=current_user.id).all()
@@ -63,15 +62,13 @@ def get_my_groups(db: Session = Depends(get_db), current_user: User = Depends(ge
     group_ids = [entry.group_id for entry in member_entries]
     groups = db.query(Group).filter(Group.id.in_(group_ids)).all()
     return groups
-
-# ✅ Get Group Deta ils you are a member of
+ 
 @router.get("/{id}", response_model=GroupOut)
 def get_group(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
-
-    # ✅ Check if current_user is a member of the group
+ 
     membership = db.query(GroupMember).filter_by(
         user_id=current_user.id,
         group_id=group.id
@@ -84,7 +81,7 @@ def get_group(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_
 
 
 
-# ✅ List all members of a group
+ 
 @router.get("/{id}/members")
 def get_group_members(id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()
@@ -104,7 +101,6 @@ def get_group_members(id: int = Path(..., gt=0), db: Session = Depends(get_db), 
 
 
 
-# This function allows the current user to leave a group by removing their membership entry from the database.
 @router.delete("/{id}/leave")
 def leave_group(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()
@@ -115,7 +111,7 @@ def leave_group(id: int, db: Session = Depends(get_db), current_user: User = Dep
     if not membership:
         raise HTTPException(status_code=400, detail="You're not a member of this group")
 
-    # Prevent owner from leaving their own group
+ 
     if group.creator_id == current_user.id:
         raise HTTPException(status_code=403, detail="Group creator cannot leave their own group")
 
@@ -123,8 +119,7 @@ def leave_group(id: int, db: Session = Depends(get_db), current_user: User = Dep
     db.commit()
 
     return {"message": f"Left group '{group.name}' successfully"}
-
-#  Delete a group (Admin-only operation)
+ 
 @router.delete("/{id}")
 def delete_group(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()
@@ -134,16 +129,14 @@ def delete_group(id: int, db: Session = Depends(get_db), current_user: User = De
     if group.creator_id != current_user.id:
         raise HTTPException(status_code=403, detail="Only the group creator can delete this group")
  
-    # Delete only the memberships related to this group
+ 
     db.query(GroupMember).filter(GroupMember.group_id == id).delete()
-
-    # Then delete group
+ 
     db.delete(group)
     db.commit()
 
     return {"message": f"Group '{group.name}' deleted successfully"}
-
-# Update Group Name (Admin-only operation)
+ 
 @router.put("/{id}", response_model=GroupOut)
 def update_group(id: int, group_data: GroupUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     group = db.query(Group).filter(Group.id == id).first()

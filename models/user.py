@@ -11,7 +11,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     bio = Column(String, default="")
     hashed_password = Column(String, nullable=False)
-    face_embedding = Column(String, nullable=True)  # You can also use JSON if storing as a vector
+    profile_picture = Column(String, nullable=True)  
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     created_groups = relationship("Group", back_populates="creator")

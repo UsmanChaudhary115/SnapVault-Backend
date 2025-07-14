@@ -46,8 +46,7 @@ async def register(
     new_user = User(
         name=name,
         email=email,
-        hashed_password=hash_password(password),
-        bio="",
+        hashed_password=hash_password(password), 
         profile_picture=profile_pic_path
     )
     db.add(new_user)

@@ -7,7 +7,7 @@ class Face(Base):
     __tablename__ = "faces"
 
     id = Column(Integer, primary_key=True, index=True)
-    embedding = Column(String, nullable=True)   #for now
+    embedding = Column(String, nullable=False)    
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)   
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True) #for now
 

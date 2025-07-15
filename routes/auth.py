@@ -14,59 +14,8 @@ import os
 
 router = APIRouter() 
 
-UPLOAD_PROFILE_DIR = "uploads/profile_pictures" 
-
-@router.post("/register", response_model=UserOut)
-async def register(
-    name: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    file: UploadFile = File(...),  # profile picture
-    db: Session = Depends(get_db)
-):
-    email = email.strip().upper() 
-    try:
-        validate_email(email)
-    except EmailNotValidError:
-        raise HTTPException(status_code=400, detail="Invalid email format")
-
-    if db.query(User).filter(User.email == email).first():
-        raise HTTPException(status_code=400, detail="Email already exists")
-
-    ext = file.filename.split('.')[-1].lower()
-    if ext not in ['jpg', 'jpeg', 'png']:
-        raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.")
-
-    profile_pic_name = f"{uuid.uuid4()}.{ext}"
-    profile_pic_path = os.path.join(UPLOAD_PROFILE_DIR, profile_pic_name)
-
-    with open(profile_pic_path, "wb") as f:
-        f.write(await file.read())
-
-    new_user = User(
-        name=name,
-        email=email,
-        hashed_password=hash_password(password), 
-        profile_picture=profile_pic_path
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-@router.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
-    
-    user.email = user.email.strip().upper() 
-
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if not db_user or not verify_password(user.password, db_user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    token = create_access_token({"sub": db_user.email})
-    return {"access_token": token, "token_type": "bearer"}
-
-
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 @router.put("/update-password")
 def update_password(
     data: PasswordUpdate,

@@ -433,12 +433,8 @@ async def get_group_photos(
             uploader = db.query(User).filter(User.id == photo.uploader_id).first()
             photo_dict['uploader_name'] = uploader.name if uploader else "Unknown"
             
-            # Parse metadata if available
-            if hasattr(photo, 'metadata') and photo.metadata:
-                try:
-                    photo_dict['metadata'] = json.loads(photo.metadata)
-                except json.JSONDecodeError:
-                    photo_dict['metadata'] = {}
+            # Add empty metadata since Photo model doesn't have metadata field
+            photo_dict['metadata'] = {}
             
             result.append(photo_dict)
         
@@ -652,12 +648,8 @@ async def get_photo_details(
             "name": uploader.name
         } if uploader else None
         
-        # Parse metadata
-        if hasattr(photo, 'metadata') and photo.metadata:
-            try:
-                photo_dict['metadata'] = json.loads(photo.metadata)
-            except json.JSONDecodeError:
-                photo_dict['metadata'] = {}
+        # Add empty metadata since Photo model doesn't have metadata field
+        photo_dict['metadata'] = {}
         
         # Include face data if requested
         if include_faces:
@@ -906,26 +898,9 @@ async def batch_tag_photos(
                     failed_updates.append({"photo_id": photo_id, "error": "No permission"})
                     continue
                 
-                # Update tags if metadata field exists
-                if hasattr(photo, 'metadata'):
-                    try:
-                        metadata = json.loads(photo.metadata) if photo.metadata else {}
-                    except json.JSONDecodeError:
-                        metadata = {}
-                    
-                    existing_tags = metadata.get('tags', [])
-                    new_tags = list(set(existing_tags + tags))  # Merge and deduplicate
-                    metadata['tags'] = new_tags
-                    
-                    photo.metadata = json.dumps(metadata)
-                    db.commit()
-                    
-                    # Sync to Supabase
-                    sync_photo_to_supabase(photo, "update")
-                    
-                    successful_updates += 1
-                else:
-                    failed_updates.append({"photo_id": photo_id, "error": "Metadata not supported"})
+                # Note: Photo model doesn't have metadata field for tags
+                # This functionality requires extending the Photo model with a tags field
+                failed_updates.append({"photo_id": photo_id, "error": "Tag functionality not implemented - Photo model needs metadata field"})
                 
             except Exception as e:
                 failed_updates.append({"photo_id": photo_id, "error": str(e)})

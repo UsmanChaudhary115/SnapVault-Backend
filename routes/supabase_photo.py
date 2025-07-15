@@ -18,6 +18,7 @@ Features:
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import get_db
 from models.photo import Photo
 from models.photo_face import PhotoFace
@@ -55,7 +56,7 @@ def sync_photo_to_supabase(photo: Photo, operation: str = "create"):
             "uploader_id": photo.uploader_id,
             "file_path": photo.file_path,
             "file_url": get_file_url(photo.file_path) if photo.file_path else None,
-            "uploaded_at": photo.uploaded_at.isoformat() if photo.uploaded_at else None,
+            "uploaded_at": photo.created_at.isoformat() if photo.created_at else None,
             "file_size": getattr(photo, 'file_size', None),
             "mime_type": getattr(photo, 'mime_type', None),
             "metadata": getattr(photo, 'metadata', {})
@@ -340,7 +341,7 @@ async def get_group_photos(
     group_id: int = Path(..., gt=0),
     limit: int = Query(50, ge=1, le=100, description="Number of photos to return"),
     offset: int = Query(0, ge=0, description="Number of photos to skip"),
-    sort_by: str = Query("uploaded_at", description="Sort field: uploaded_at, file_size"),
+    sort_by: str = Query("created_at", description="Sort field: created_at, file_size"),
     sort_order: str = Query("desc", description="Sort order: asc, desc"),
     tags: Optional[str] = Query(None, description="Filter by tags (comma-separated)"),
     uploader_id: Optional[int] = Query(None, description="Filter by uploader"),
@@ -393,23 +394,23 @@ async def get_group_photos(
         if date_from:
             try:
                 from_date = datetime.strptime(date_from, "%Y-%m-%d")
-                query = query.filter(Photo.uploaded_at >= from_date)
+                query = query.filter(Photo.created_at >= from_date)
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid date_from format. Use YYYY-MM-DD")
         
         if date_to:
             try:
                 to_date = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
-                query = query.filter(Photo.uploaded_at < to_date)
+                query = query.filter(Photo.created_at < to_date)
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid date_to format. Use YYYY-MM-DD")
         
         # Apply sorting
-        if sort_by == "uploaded_at":
+        if sort_by == "created_at":
             if sort_order == "asc":
-                query = query.order_by(Photo.uploaded_at.asc())
+                query = query.order_by(Photo.created_at.asc())
             else:
-                query = query.order_by(Photo.uploaded_at.desc())
+                query = query.order_by(Photo.created_at.desc())
         elif sort_by == "file_size" and hasattr(Photo, 'file_size'):
             if sort_order == "asc":
                 query = query.order_by(Photo.file_size.asc())
@@ -417,7 +418,7 @@ async def get_group_photos(
                 query = query.order_by(Photo.file_size.desc())
         else:
             # Default sorting
-            query = query.order_by(Photo.uploaded_at.desc())
+            query = query.order_by(Photo.created_at.desc())
         
         # Apply pagination
         photos = query.offset(offset).limit(limit).all()
@@ -501,7 +502,7 @@ async def get_my_photos_all_groups(
         photos = db.query(Photo).filter(
             Photo.id.in_(photo_ids),
             Photo.group_id.in_(accessible_group_ids)
-        ).order_by(Photo.uploaded_at.desc()).offset(offset).limit(limit).all()
+        ).order_by(Photo.created_at.desc()).offset(offset).limit(limit).all()
         
         # Enhance with additional data
         result = []
@@ -576,7 +577,7 @@ async def get_my_photos_in_group(
         photos = db.query(Photo).filter(
             Photo.group_id == group_id,
             Photo.id.in_(photo_ids)
-        ).order_by(Photo.uploaded_at.desc()).offset(offset).limit(limit).all()
+        ).order_by(Photo.created_at.desc()).offset(offset).limit(limit).all()
         
         # Enhance with additional data
         result = []
@@ -791,7 +792,7 @@ async def get_photo_analytics(
         total_photos = db.query(Photo).filter(Photo.group_id == group_id).count()
         recent_photos = db.query(Photo).filter(
             Photo.group_id == group_id,
-            Photo.uploaded_at >= start_date
+            Photo.created_at >= start_date
         ).count()
         
         # Storage usage
@@ -807,11 +808,11 @@ async def get_photo_analytics(
         # Top uploaders
         top_uploaders = db.query(
             User.name,
-            db.func.count(Photo.id).label('photo_count')
+            func.count(Photo.id).label('photo_count')
         ).join(Photo, User.id == Photo.uploader_id)\
          .filter(Photo.group_id == group_id)\
          .group_by(User.id, User.name)\
-         .order_by(db.func.count(Photo.id).desc())\
+         .order_by(func.count(Photo.id).desc())\
          .limit(5).all()
         
         # Photos by day (last 7 days)
@@ -823,8 +824,8 @@ async def get_photo_analytics(
             
             day_count = db.query(Photo).filter(
                 Photo.group_id == group_id,
-                Photo.uploaded_at >= day_start,
-                Photo.uploaded_at < day_end
+                Photo.created_at >= day_start,
+                Photo.created_at < day_end
             ).count()
             
             daily_stats.append({

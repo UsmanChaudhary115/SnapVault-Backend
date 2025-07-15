@@ -19,6 +19,7 @@ import random
 import string
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from database import get_db
 from models.group import Group
 from models.groupRoles import GroupRole
@@ -157,7 +158,22 @@ async def create_group(
         sync_group_to_supabase(new_group, "create")
         sync_membership_to_supabase(creator_membership, "create")
         
-        return new_group
+        # Return properly formatted response
+        return {
+            "id": new_group.id,
+            "name": new_group.name,
+            "description": new_group.description,
+            "invite_code": new_group.invite_code,
+            "created_at": new_group.created_at,
+            "creator": {
+                "id": current_user.id,
+                "name": current_user.name,
+                "email": current_user.email,
+                "bio": current_user.bio,
+                "created_at": current_user.created_at,
+                "profile_picture": current_user.profile_picture
+            }
+        }
         
     except HTTPException:
         raise
@@ -247,30 +263,40 @@ async def get_my_groups(
         HTTPException: 404 if no groups found, 500 if query fails
     """
     try:
-        # Get user's group memberships
-        member_entries = db.query(GroupMember).filter_by(user_id=current_user.id).all()
-        if not member_entries:
+        # Get user's groups with creator info using join for efficiency
+        groups_with_membership = db.query(Group, GroupMember, User).join(
+            GroupMember, Group.id == GroupMember.group_id
+        ).join(
+            User, Group.creator_id == User.id
+        ).filter(
+            GroupMember.user_id == current_user.id
+        ).all()
+        
+        if not groups_with_membership:
             return []
         
-        # Get groups
-        group_ids = [entry.group_id for entry in member_entries]
-        groups = db.query(Group).filter(Group.id.in_(group_ids)).all()
-        
-        # Add role information and statistics if requested
+        # Process results
         result = []
-        for group in groups:
+        for group, membership, creator in groups_with_membership:
             group_data = {
                 "id": group.id,
                 "name": group.name,
                 "description": group.description,
                 "creator_id": group.creator_id,
                 "invite_code": group.invite_code,
-                "created_at": group.created_at
+                "created_at": group.created_at,
+                "creator": {
+                    "id": creator.id,
+                    "name": creator.name,
+                    "email": creator.email,
+                    "bio": creator.bio,
+                    "created_at": creator.created_at,
+                    "profile_picture": creator.profile_picture
+                }
             }
             
             # Add user's role in this group
-            user_role = next((m.role_id for m in member_entries if m.group_id == group.id), None)
-            group_data["user_role_id"] = user_role
+            group_data["user_role_id"] = membership.role_id
             
             if include_stats:
                 # Add group statistics
@@ -338,7 +364,14 @@ async def get_group_details(
             "creator_id": group.creator_id,
             "invite_code": group.invite_code,
             "created_at": group.created_at,
-            "creator_name": creator.name if creator else "Unknown",
+            "creator": {
+                "id": creator.id,
+                "name": creator.name,
+                "email": creator.email,
+                "bio": creator.bio,
+                "created_at": creator.created_at,
+                "profile_picture": creator.profile_picture
+            } if creator else None,
             "user_role_id": membership.role_id,
             "stats": {
                 "total_photos": total_photos,
@@ -407,7 +440,7 @@ async def get_group_members(
                 role = db.query(GroupRole).filter(GroupRole.id == membership.role_id).first()
                 member_info["role"] = {
                     "id": membership.role_id,
-                    "name": role.role_name if role else "Unknown"
+                    "name": role.name if role else "Unknown"
                 }
             
             members_data.append(member_info)
@@ -612,7 +645,25 @@ async def update_group(
         # Sync to Supabase
         sync_group_to_supabase(group, "update")
         
-        return group
+        # Get creator information for response
+        creator = db.query(User).filter(User.id == group.creator_id).first()
+        
+        # Return properly formatted response
+        return {
+            "id": group.id,
+            "name": group.name,
+            "description": group.description,
+            "invite_code": group.invite_code,
+            "created_at": group.created_at,
+            "creator": {
+                "id": creator.id,
+                "name": creator.name,
+                "email": creator.email,
+                "bio": creator.bio,
+                "created_at": creator.created_at,
+                "profile_picture": creator.profile_picture
+            } if creator else None
+        }
         
     except HTTPException:
         raise
@@ -695,8 +746,8 @@ async def update_member_role(
             "member_id": member_id,
             "group_id": group_id,
             "role_change": {
-                "from": old_role.role_name if old_role else "Unknown",
-                "to": new_role.role_name if new_role else "Unknown"
+                "from": old_role.name if old_role else "Unknown",
+                "to": new_role.name if new_role else "Unknown"
             }
         }
         
@@ -841,7 +892,7 @@ async def get_group_analytics(
         # Recent photos (within the specified days)
         recent_photos = db.query(Photo).filter(
             Photo.group_id == group_id,
-            Photo.uploaded_at >= start_date
+            Photo.created_at >= start_date
         ).count()
         
         # Storage usage
@@ -862,17 +913,17 @@ async def get_group_analytics(
         ).filter(GroupMember.group_id == group_id).all()
         
         for membership, role in memberships:
-            role_name = role.role_name
+            role_name = role.name
             role_distribution[role_name] = role_distribution.get(role_name, 0) + 1
         
         # Top contributors (most photos uploaded)
         top_contributors = db.query(
             User.name, 
-            db.func.count(Photo.id).label('photo_count')
+            func.count(Photo.id).label('photo_count')
         ).join(Photo, User.id == Photo.uploader_id)\
          .filter(Photo.group_id == group_id)\
          .group_by(User.id, User.name)\
-         .order_by(db.func.count(Photo.id).desc())\
+         .order_by(func.count(Photo.id).desc())\
          .limit(5).all()
         
         analytics = {

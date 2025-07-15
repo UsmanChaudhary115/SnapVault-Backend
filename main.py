@@ -24,8 +24,7 @@ app.include_router(user.router, prefix="/user", tags=["User"])
 app.include_router(group.router, prefix="/groups", tags=["Groups"])
 app.include_router(photo.router, prefix="/photos", tags=["Photos"])
 app.include_router(testing.router, prefix="/testing", tags=["Testing"])
-import sys
-print("🐍 Running Python version:", sys.version)
+
 
 
 @app.get("/")

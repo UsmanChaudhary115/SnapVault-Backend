@@ -9,12 +9,13 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    bio = Column(String, default="")
+    bio = Column(String, default="Hey there, I'm using SnapVault!") 
+
     hashed_password = Column(String, nullable=False)
-    face_embedding = Column(String, nullable=True)  # You can also use JSON if storing as a vector
+    profile_picture = Column(String, nullable=True)  
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     created_groups = relationship("Group", back_populates="creator")
     joined_groups = relationship("GroupMember", back_populates="user")
     uploaded_photos = relationship("Photo", back_populates="uploader")
-    faces_in_photos = relationship("PhotoFace", back_populates="user")
+    faces = relationship("Face", back_populates="user")

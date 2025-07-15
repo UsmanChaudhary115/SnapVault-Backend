@@ -253,4 +253,4 @@ local_config.py
 # Backup files
 *.bak
 *.backup
-*.old 
+*.old

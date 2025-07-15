@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
+from models.revoked_token import RevokedToken
 from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
@@ -14,7 +15,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
+    if db.query(RevokedToken).filter_by(token=token).first():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")

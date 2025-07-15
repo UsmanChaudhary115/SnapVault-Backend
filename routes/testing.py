@@ -10,8 +10,7 @@ from utils.auth_utils import get_current_user
 from models.user import User
 
 router = APIRouter()
-
-#Testing endpoint to get all groups
+ 
 @router.get("allGroups", response_model=list[GroupOut])
 def get_all_groups(db: Session = Depends(get_db)):
     groups = db.query(Group).all()

@@ -4,4 +4,8 @@ sqlalchemy
 pydantic
 passlib[bcrypt]
 python-jose[cryptography]
-python-multipart 
+python-multipart
+email_validator
+supabase
+python-dotenv
+httpx 

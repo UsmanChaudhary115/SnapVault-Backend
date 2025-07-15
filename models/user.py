@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -11,7 +11,12 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     bio = Column(String, default="Hey there, I'm using SnapVault!") 
 
-    hashed_password = Column(String, nullable=False)
+    # Supabase integration fields
+    supabase_user_id = Column(String, unique=True, nullable=True, index=True)  # Supabase user ID
+    auth_provider = Column(String, default="email")  # email, google, etc.
+    
+    # Password fields (optional for OAuth users)
+    hashed_password = Column(String, nullable=True)  # Now nullable for OAuth users
     profile_picture = Column(String, nullable=True)  
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

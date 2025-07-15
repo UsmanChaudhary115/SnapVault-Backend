@@ -201,11 +201,25 @@ async def update_profile_picture(
         file.file.seek(0)
         
         # Delete old profile picture if exists
+        old_file_path = None
         if current_user.profile_picture:
-            await delete_file(current_user.profile_picture)
+            old_file_path = current_user.profile_picture
+            print(f"🗑️  Attempting to delete old profile picture: {old_file_path}")
+            
+            try:
+                deletion_success = await delete_file(old_file_path)
+                if deletion_success:
+                    print(f"✅ Successfully deleted old profile picture: {old_file_path}")
+                else:
+                    print(f"⚠️  Failed to delete old profile picture: {old_file_path} (file may not exist)")
+            except Exception as e:
+                print(f"❌ Error deleting old profile picture {old_file_path}: {e}")
+                # Continue with upload even if deletion fails
         
         # Save new profile picture using modular storage
+        print(f"📁 Saving new profile picture...")
         file_path = await save_profile_picture(file)
+        print(f"✅ New profile picture saved: {file_path}")
         
         # Update local database
         current_user.profile_picture = file_path
@@ -479,6 +493,68 @@ async def get_user_storage_stats(current_user: User = Depends(get_current_user))
         raise HTTPException(status_code=500, detail=f"Failed to get storage stats: {str(e)}")
 
 
+@router.get("/supabase_debug_files")
+async def debug_user_files(current_user: User = Depends(get_current_user)):
+    """
+    Debug endpoint to check user's file status
+    
+    Returns:
+        dict: File status information for debugging
+    """
+    try:
+        import os
+        
+        debug_info = {
+            "user_id": current_user.id,
+            "profile_picture_in_db": current_user.profile_picture,
+            "file_checks": {}
+        }
+        
+        # Check if profile picture file exists
+        if current_user.profile_picture:
+            file_path = current_user.profile_picture
+            normalized_path = os.path.normpath(file_path)
+            
+            debug_info["file_checks"]["profile_picture"] = {
+                "path": file_path,
+                "normalized_path": normalized_path,
+                "exists": os.path.exists(normalized_path),
+                "is_file": os.path.isfile(normalized_path) if os.path.exists(normalized_path) else False,
+                "size": os.path.getsize(normalized_path) if os.path.exists(normalized_path) else 0
+            }
+        else:
+            debug_info["file_checks"]["profile_picture"] = "No profile picture set"
+        
+        # List all files in profile pictures directory
+        profile_dir = "uploads/profile_pictures"
+        if os.path.exists(profile_dir):
+            files = []
+            for file in os.listdir(profile_dir):
+                file_path = os.path.join(profile_dir, file)
+                if os.path.isfile(file_path):
+                    files.append({
+                        "name": file,
+                        "path": file_path,
+                        "size": os.path.getsize(file_path)
+                    })
+            debug_info["profile_pictures_directory"] = {
+                "path": profile_dir,
+                "exists": True,
+                "files": files,
+                "total_files": len(files)
+            }
+        else:
+            debug_info["profile_pictures_directory"] = {
+                "path": profile_dir,
+                "exists": False
+            }
+        
+        return debug_info
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Debug failed: {str(e)}")
+
+
 @router.get("/supabase_user_activity")
 async def get_user_activity(
     limit: int = 10,
@@ -509,12 +585,12 @@ async def get_user_activity(
         from models.photo import Photo
         recent_photos = db.query(Photo).filter(
             Photo.uploader_id == current_user.id
-        ).order_by(Photo.uploaded_at.desc()).limit(limit).all()
+        ).order_by(Photo.created_at.desc()).limit(limit).all()
         
         for photo in recent_photos:
             activities.append({
                 "type": "photo_upload",
-                "timestamp": photo.uploaded_at,
+                "timestamp": photo.created_at,
                 "details": {
                     "photo_id": photo.id,
                     "group_id": photo.group_id

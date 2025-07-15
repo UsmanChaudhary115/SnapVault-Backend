@@ -137,12 +137,30 @@ class LocalStorageHandler(StorageHandler):
     async def delete_file(self, file_path: str) -> bool:
         """Delete file from local storage"""
         try:
-            if self.file_exists(file_path):
-                os.remove(file_path)
+            if not file_path:
+                print("Warning: Empty file path provided for deletion")
+                return False
+                
+            # Normalize the path
+            normalized_path = os.path.normpath(file_path)
+            
+            print(f"🔍 Checking if file exists: {normalized_path}")
+            if self.file_exists(normalized_path):
+                print(f"🗑️  File found, attempting deletion: {normalized_path}")
+                os.remove(normalized_path)
+                print(f"✅ Successfully deleted file: {normalized_path}")
                 return True
+            else:
+                print(f"⚠️  File not found for deletion: {normalized_path}")
+                return False
+        except PermissionError as e:
+            print(f"❌ Permission denied deleting file {file_path}: {e}")
+            return False
+        except FileNotFoundError as e:
+            print(f"⚠️  File not found during deletion {file_path}: {e}")
             return False
         except Exception as e:
-            print(f"Error deleting file {file_path}: {e}")
+            print(f"❌ Unexpected error deleting file {file_path}: {e}")
             return False
     
     def file_exists(self, file_path: str) -> bool:

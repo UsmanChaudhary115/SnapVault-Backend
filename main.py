@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from database import engine, Base, SessionLocal 
-from routes import auth, group, photo, testing, user
+from routes import auth, group, photo, testing, user, supabase_auth
 from utils.seed_roles import seed_roles
 import os
 
@@ -20,6 +20,7 @@ with SessionLocal() as db:
 
  
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(supabase_auth.router, prefix="/auth", tags=["Supabase Auth"])
 app.include_router(user.router, prefix="/user", tags=["User"])
 app.include_router(group.router, prefix="/groups", tags=["Groups"])
 app.include_router(photo.router, prefix="/photos", tags=["Photos"])

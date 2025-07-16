@@ -26,6 +26,7 @@ app.include_router(group.router, prefix="/groups", tags=["Groups"])
 app.include_router(photo.router, prefix="/photos", tags=["Photos"])
 app.include_router(testing.router, prefix="/testing", tags=["Testing"])
 
+
 # Supabase routes (using /supabase prefix to avoid conflicts)
 app.include_router(supabase_auth.router, prefix="/supabase/auth", tags=["Supabase Auth"])
 app.include_router(supabase_user.router, prefix="/supabase/user", tags=["Supabase User"])
@@ -33,6 +34,7 @@ app.include_router(supabase_group.router, prefix="/supabase/groups", tags=["Supa
 app.include_router(supabase_photo.router, prefix="/supabase/photos", tags=["Supabase Photos"])
 import sys
 print("🐍 Running Python version:", sys.version)
+
 
 
 @app.get("/")

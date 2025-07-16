@@ -26,13 +26,7 @@ def update_bio(updatedBio: str, db: Session = Depends(get_db), current_user: Use
 def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
-# @router.put("/profile_picture/{profile_picture}", response_model=UserOut)
-# def update_profile_picture(profile_picture: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-#     current_user.profile_picture = profile_picture
-#     db.commit()
-#     db.refresh(current_user)
-#     return current_user
-    
+
 @router.put("/name/{name}", response_model=UserOut)
 def update_name(name: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     current_user.name = name
@@ -65,15 +59,20 @@ def update_email(updatedUser: UpdateUser, db: Session = Depends(get_db), current
     db.commit()
     db.refresh(current_user)
     return current_user
-
 @router.delete("/delete", status_code=status.HTTP_200_OK)
 def delete_user(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)): 
-    owned_groups = db.query(Group).filter(Group.creator_id == current_user.id).all()
-    for group in owned_groups:
-        db.delete(group)
- 
-    joined_groups = db.query(GroupMember).filter(GroupMember.user_id == current_user.id).all()
-    for membership in joined_groups:
+    owned_memberships = db.query(GroupMember).filter_by(user_id=current_user.id, role_id=1).all()
+    owned_group_ids = {m.group_id for m in owned_memberships}
+    
+    for owned_group_id in owned_group_ids:
+        group = db.query(Group).filter(Group.id == owned_group_id).first()
+        if group:
+            db.query(GroupMember).filter(GroupMember.group_id == group.id).delete() 
+            db.delete(group)
+    
+    db.commit()
+    remaining_groups = db.query(GroupMember).filter(GroupMember.user_id == current_user.id, ~GroupMember.group_id.in_(owned_group_ids)).all()
+    for membership in remaining_groups:
         db.delete(membership)
  
     db.delete(current_user)

@@ -21,9 +21,10 @@ Usage:
 """
 
 import sys
-import os
+import os 
 from typing import Dict, List, Optional
 from utils.supabase_client import get_supabase_admin_client
+
 import json
 
 def create_photos_table(supabase) -> bool:
@@ -57,18 +58,18 @@ def create_photos_table(supabase) -> bool:
     ]
     
     try:
-        print("📸 Creating photos table...")
+        print("Creating photos table...")
         result = supabase.rpc('exec_sql', {'sql': photos_table_sql}).execute()
         
-        print("📸 Creating photos table indexes...")
+        print("Creating photos table indexes...")
         for index_sql in photos_indexes_sql:
             supabase.rpc('exec_sql', {'sql': index_sql}).execute()
         
-        print("✅ Photos table and indexes created successfully")
+        print("Photos table and indexes created successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error creating photos table: {e}")
+        print(f"Error creating photos table: {e}")
         return False
 
 
@@ -98,18 +99,18 @@ def create_groups_table(supabase) -> bool:
     ]
     
     try:
-        print("👥 Creating groups table...")
+        print("Creating groups table...")
         supabase.rpc('exec_sql', {'sql': groups_table_sql}).execute()
         
-        print("👥 Creating groups table indexes...")
+        print("Creating groups table indexes...")
         for index_sql in groups_indexes_sql:
             supabase.rpc('exec_sql', {'sql': index_sql}).execute()
         
-        print("✅ Groups table and indexes created successfully")
+        print("Groups table and indexes created successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error creating groups table: {e}")
+        print(f"Error creating groups table: {e}")
         return False
 
 
@@ -138,18 +139,18 @@ def create_group_members_table(supabase) -> bool:
     ]
     
     try:
-        print("👤 Creating group_members table...")
+        print("Creating group_members table...")
         supabase.rpc('exec_sql', {'sql': group_members_table_sql}).execute()
         
-        print("👤 Creating group_members table indexes...")
+        print("Creating group_members table indexes...")
         for index_sql in group_members_indexes_sql:
             supabase.rpc('exec_sql', {'sql': index_sql}).execute()
         
-        print("✅ Group_members table and indexes created successfully")
+        print("Group_members table and indexes created successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error creating group_members table: {e}")
+        print(f"Error creating group_members table: {e}")
         return False
 
 
@@ -181,18 +182,18 @@ def create_user_profiles_table(supabase) -> bool:
     ]
     
     try:
-        print("👨‍💼 Creating user_profiles table...")
+        print("Creating user_profiles table...")
         supabase.rpc('exec_sql', {'sql': user_profiles_table_sql}).execute()
         
-        print("👨‍💼 Creating user_profiles table indexes...")
+        print("Creating user_profiles table indexes...")
         for index_sql in user_profiles_indexes_sql:
             supabase.rpc('exec_sql', {'sql': index_sql}).execute()
         
-        print("✅ User_profiles table and indexes created successfully")
+        print("User_profiles table and indexes created successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error creating user_profiles table: {e}")
+        print(f"Error creating user_profiles table: {e}")
         return False
 
 
@@ -207,19 +208,19 @@ def setup_row_level_security(supabase) -> bool:
     ]
     
     try:
-        print("🔒 Enabling Row Level Security...")
+        print("Enabling Row Level Security...")
         for command in rls_commands:
             try:
                 supabase.rpc('exec_sql', {'sql': command}).execute()
             except Exception as e:
                 # RLS might already be enabled, which is fine
-                print(f"ℹ️  RLS command note: {e}")
+                print(f"RLS command note: {e}")
         
-        print("✅ Row Level Security enabled successfully")
+        print("Row Level Security enabled successfully")
         return True
         
     except Exception as e:
-        print(f"❌ Error setting up RLS: {e}")
+        print(f"Error setting up RLS: {e}")
         return False
 
 
@@ -290,18 +291,18 @@ def create_database_functions(supabase) -> bool:
     ]
     
     try:
-        print("⚙️  Creating database functions...")
+        print("Creating database functions...")
         for func_name, func_sql in functions:
             try:
                 supabase.rpc('exec_sql', {'sql': func_sql}).execute()
-                print(f"✅ Created function: {func_name}")
+                print(f"Created function: {func_name}")
             except Exception as e:
-                print(f"ℹ️  Function {func_name}: {e}")
+                print(f"Function {func_name}: {e}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error creating functions: {e}")
+        print(f"Error creating functions: {e}")
         return False
 
 
@@ -311,17 +312,17 @@ def verify_tables_exist(supabase) -> Dict[str, bool]:
     required_tables = ['photos', 'groups', 'group_members', 'user_profiles']
     table_status = {}
     
-    print("🔍 Verifying table creation...")
+    print("Verifying table creation...")
     
     for table in required_tables:
         try:
             # Try to query the table to see if it exists
             result = supabase.table(table).select("*").limit(1).execute()
             table_status[table] = True
-            print(f"✅ Table '{table}' exists and is accessible")
+            print(f"Table '{table}' exists and is accessible")
         except Exception as e:
             table_status[table] = False
-            print(f"❌ Table '{table}' verification failed: {e}")
+            print(f"Table '{table}' verification failed: {e}")
     
     return table_status
 
@@ -343,17 +344,17 @@ def setup_supabase_database(
         Dict with setup results and status
     """
     
-    print("🚀 SnapVault Supabase Database Setup")
+    print("SnapVault Supabase Database Setup")
     print("=" * 50)
     
     try:
         # Get Supabase admin client
-        print("🔌 Connecting to Supabase...")
+        print("Connecting to Supabase...")
         supabase = get_supabase_admin_client()
-        print("✅ Connected to Supabase successfully")
+        print("Connected to Supabase successfully")
         
     except Exception as e:
-        error_msg = f"❌ Failed to connect to Supabase: {e}"
+        error_msg = f"Failed to connect to Supabase: {e}"
         print(error_msg)
         return {
             "success": False,
@@ -380,7 +381,7 @@ def setup_supabase_database(
         "errors": []
     }
     
-    print("\n📋 Creating database tables...")
+    print("\nCreating database tables...")
     print("-" * 30)
     
     # Create all tables
@@ -403,11 +404,11 @@ def setup_supabase_database(
             setup_results["success"] = False
             error_msg = f"Exception creating {table_name}: {e}"
             setup_results["errors"].append(error_msg)
-            print(f"❌ {error_msg}")
+            print(f"{error_msg}")
     
     # Create database functions
     if create_functions:
-        print("\n⚙️  Setting up database functions...")
+        print("\nSetting up database functions...")
         print("-" * 30)
         try:
             setup_results["functions_created"] = create_database_functions(supabase)
@@ -415,11 +416,11 @@ def setup_supabase_database(
             setup_results["functions_created"] = False
             error_msg = f"Failed to create functions: {e}"
             setup_results["errors"].append(error_msg)
-            print(f"❌ {error_msg}")
+            print(f"{error_msg}")
     
     # Enable Row Level Security
     if enable_rls:
-        print("\n🔒 Setting up security...")
+        print("\nSetting up security...")
         print("-" * 30)
         try:
             setup_results["rls_enabled"] = setup_row_level_security(supabase)
@@ -427,40 +428,40 @@ def setup_supabase_database(
             setup_results["rls_enabled"] = False
             error_msg = f"Failed to setup RLS: {e}"
             setup_results["errors"].append(error_msg)
-            print(f"❌ {error_msg}")
+            print(f"{error_msg}")
     
     # Verify all tables exist
-    print("\n🔍 Final verification...")
+    print("\nFinal verification...")
     print("-" * 30)
     setup_results["verification"] = verify_tables_exist(supabase)
     
     # Final status
-    print("\n📊 Setup Summary")
+    print("\nSetup Summary")
     print("=" * 50)
     
     if setup_results["success"] and all(setup_results["verification"].values()):
-        print("🎉 SUCCESS! Supabase database setup completed successfully!")
-        print("\n📋 What was created:")
+        print("SUCCESS! Supabase database setup completed successfully!")
+        print("\nWhat was created:")
         for table, status in setup_results["tables_created"].items():
-            status_icon = "✅" if status else "❌"
+            status_icon = "Success" if status else "Failed"
             print(f"   {status_icon} {table} table")
         
         if setup_results["functions_created"]:
-            print("   ✅ Database functions")
+            print("   Success Database functions")
         if setup_results["rls_enabled"]: 
-            print("   ✅ Row Level Security")
+            print("   Success Row Level Security")
             
-        print(f"\n🔗 Your Supabase database is ready!")
+        print(f"\nYour Supabase database is ready!")
         print("   You can now use all Supabase endpoints in your SnapVault application.")
         
     else:
-        print("⚠️  Setup completed with some issues:")
+        print("Setup completed with some issues:")
         for error in setup_results["errors"]:
-            print(f"   ❌ {error}")
+            print(f"   {error}")
         
-        print("\n📋 Table Status:")
+        print("\nTable Status:")
         for table, status in setup_results["verification"].items():
-            status_icon = "✅" if status else "❌"
+            status_icon = "Success" if status else "Failed"
             print(f"   {status_icon} {table}")
     
     return setup_results
@@ -525,4 +526,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    main() 
+    main()

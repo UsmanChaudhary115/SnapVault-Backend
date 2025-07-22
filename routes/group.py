@@ -56,8 +56,11 @@ def create_group(
 
  
 @router.post("/join")
-def join_group(join: GroupJoin, db: Session = Depends(get_db), current_user: User = Depends(get_current_user), group: Group = Depends(is_active_group)):
+def join_group(info: GroupJoin, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     
+    group = db.query(Group).filter(Group.invite_code == info.invite_code).first()
+    if not group:   
+        raise HTTPException(status_code=404, detail="Group not found")
     already_joined = db.query(GroupMember).filter_by(user_id=current_user.id, group_id=group.id).first()
     if already_joined:
         raise HTTPException(status_code=400, detail="You already joined this group")

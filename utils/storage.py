@@ -146,21 +146,21 @@ class LocalStorageHandler(StorageHandler):
             
             print(f"🔍 Checking if file exists: {normalized_path}")
             if self.file_exists(normalized_path):
-                print(f"🗑️  File found, attempting deletion: {normalized_path}")
+                print(f"File found, attempting deletion: {normalized_path}")
                 os.remove(normalized_path)
-                print(f"✅ Successfully deleted file: {normalized_path}")
+                print(f"Successfully deleted file: {normalized_path}")
                 return True
             else:
-                print(f"⚠️  File not found for deletion: {normalized_path}")
+                print(f"File not found for deletion: {normalized_path}")
                 return False
         except PermissionError as e:
-            print(f"❌ Permission denied deleting file {file_path}: {e}")
+            print(f"Permission denied deleting file {file_path}: {e}")
             return False
         except FileNotFoundError as e:
-            print(f"⚠️  File not found during deletion {file_path}: {e}")
+            print(f"File not found during deletion {file_path}: {e}")
             return False
         except Exception as e:
-            print(f"❌ Unexpected error deleting file {file_path}: {e}")
+            print(f"Unexpected error deleting file {file_path}: {e}")
             return False
     
     def file_exists(self, file_path: str) -> bool:

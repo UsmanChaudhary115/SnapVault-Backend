@@ -8,7 +8,8 @@ class Face(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     embedding = Column(String, nullable=False)    
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)   
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    embedding_count = Column(Integer, default=1)   
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=True) #for now
 
     user = relationship("User", back_populates="faces")

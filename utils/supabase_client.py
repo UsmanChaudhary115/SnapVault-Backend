@@ -1,6 +1,7 @@
 from supabase import create_client, Client
 from typing import Optional
-from utils.config import SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+from .config import SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+from .config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Create Supabase clients
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)

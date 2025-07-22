@@ -1,20 +1,3 @@
-"""
-Supabase Group Routes for SnapVault
-
-This module provides group management endpoints that integrate with Supabase
-for data storage and synchronization, while maintaining local database
-functionality and using the modular storage system.
-
-All endpoints use the 'supabase_' prefix to distinguish from local routes.
-
-Features:
-- Group creation and management with Supabase sync
-- Member management with role-based permissions
-- Invite code system
-- Group statistics and analytics
-- Storage management per group
-"""
-
 import random
 import string
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -29,7 +12,7 @@ from schemas.group import GroupCreate, GroupJoin, GroupOut, GroupUpdate
 from utils.auth_utils import get_current_user
 from utils.supabase_client import get_supabase_client, get_supabase_admin_client
 from utils.storage import StorageStats
-from typing import Optional, List
+from typing import List
 import json
 from datetime import datetime
 
@@ -37,7 +20,6 @@ router = APIRouter()
 
 
 def generate_invite_code(length=6):
-    """Generate a random invite code for groups"""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
 
 
@@ -58,6 +40,7 @@ def sync_group_to_supabase(group: Group, operation: str = "create"):
             "description": group.description,
             "creator_id": group.creator_id,
             "invite_code": group.invite_code,
+            "role_id": group.role_id,
             "created_at": group.created_at.isoformat() if group.created_at else None
         }
         
@@ -106,18 +89,6 @@ async def create_group(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Create a new group with Supabase synchronization
-    
-    Args:
-        group: Group creation data
-        
-    Returns:
-        GroupOut: Created group data
-        
-    Raises:
-        HTTPException: 400 if validation fails, 500 if creation fails
-    """
     try:
         # Validate group data
         if not group.name or len(group.name.strip()) < 2:

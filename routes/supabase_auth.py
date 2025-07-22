@@ -1,10 +1,9 @@
 from email_validator import validate_email, EmailNotValidError
-from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from database import get_db
-from models.user import User
-from models.revoked_token import RevokedToken
-from schemas.user import UserCreate, UserLogin, UserOut, PasswordUpdate
+from models.user import User 
+from schemas.user import UserLogin, UserOut
 from utils.hash import hash_password, verify_password
 from utils.jwt import create_access_token
 from utils.auth_utils import get_current_user

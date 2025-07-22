@@ -33,17 +33,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @router.get("/supabase_profile", response_model=UserOut)
 async def get_current_user_profile(current_user: User = Depends(get_current_user)):
-    """
-    Get current user's profile information
-    
-    Returns:
-        UserOut: Current user's profile data
-        
-    Raises:
-        HTTPException: 401 if user not authenticated
-    """
-    try:
-        # Get additional user data from Supabase if available
+    try: 
         if current_user.supabase_user_id:
             supabase = get_supabase_client()
             try:

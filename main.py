@@ -32,8 +32,7 @@ app.include_router(supabase_auth.router, prefix="/supabase/auth", tags=["Supabas
 app.include_router(supabase_user.router, prefix="/supabase/user", tags=["Supabase User"])
 app.include_router(supabase_group.router, prefix="/supabase/groups", tags=["Supabase Groups"])
 app.include_router(supabase_photo.router, prefix="/supabase/photos", tags=["Supabase Photos"])
-import sys
-print("🐍 Running Python version:", sys.version)
+
 
 
 

@@ -12,8 +12,8 @@ class User(Base):
     bio = Column(String, default="Hey there, I'm using SnapVault!") 
 
     # Supabase integration fields
-    supabase_user_id = Column(String, unique=True, nullable=True, index=True)  # Supabase user ID
-    auth_provider = Column(String, default="email")  # email, google, etc.
+    # supabase_user_id = Column(String, unique=True, nullable=True, index=True)  # Supabase user ID
+    # auth_provider = Column(String, default="email")  # email, google, etc.
     
     # Password fields (optional for OAuth users)
     hashed_password = Column(String, nullable=True)  # Now nullable for OAuth users

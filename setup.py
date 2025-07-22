@@ -8,16 +8,18 @@ import os
 import sys
 import subprocess
 import platform
+from dotenv import load_dotenv
+load_dotenv()
 
 def run_command(command, description):
     """Run a command and handle errors"""
-    print(f"🔄 {description}...")
+    print(f"{description}...")
     try:
         result = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
-        print(f"✅ {description} completed successfully")
+        print(f"{description} completed successfully")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ {description} failed: {e}")
+        print(f"{description} failed: {e}")
         print(f"Error output: {e.stderr}")
         return False
 
@@ -25,16 +27,16 @@ def check_python_version():
     """Check if Python version is compatible"""
     version = sys.version_info
     if version.major < 3 or (version.major == 3 and version.minor < 10):
-        print("❌ Python 3.10 or higher is required")
+        print("Python 3.10 or higher is required")
         print(f"Current version: {version.major}.{version.minor}.{version.micro}")
         return False
-    print(f"✅ Python version {version.major}.{version.minor}.{version.micro} is compatible")
+    print(f"Python version {version.major}.{version.minor}.{version.micro} is compatible")
     return True
 
 def create_virtual_environment():
     """Create virtual environment"""
     if os.path.exists("venv"):
-        print("✅ Virtual environment already exists")
+        print("Virtual environment already exists")
         return True
     
     return run_command("python -m venv venv", "Creating virtual environment")
@@ -44,15 +46,15 @@ def activate_virtual_environment():
     if platform.system() == "Windows":
         activate_script = os.path.join("venv", "Scripts", "activate")
         if os.path.exists(activate_script):
-            print("✅ Virtual environment activation script found")
+            print("Virtual environment activation script found")
             return True
     else:
         activate_script = os.path.join("venv", "bin", "activate")
         if os.path.exists(activate_script):
-            print("✅ Virtual environment activation script found")
+            print("Virtual environment activation script found")
             return True
     
-    print("❌ Virtual environment activation script not found")
+    print("Virtual environment activation script not found")
     return False
 
 def install_dependencies():
@@ -70,7 +72,7 @@ def install_dependencies():
         python_path = os.path.join("venv", "bin", "python")
     
     if not os.path.exists(pip_path):
-        print("❌ pip not found in virtual environment")
+        print("pip not found in virtual environment")
         print(f"   Looked for: {pip_path}")
         print("   Try recreating the virtual environment with: python -m venv venv")
         return False
@@ -84,9 +86,9 @@ def create_uploads_directory():
     for directory in directories:
         if not os.path.exists(directory):
             os.makedirs(directory)
-            print(f"✅ Created {directory} directory")
+            print(f"Created {directory} directory")
         else:
-            print(f"✅ {directory} directory already exists")
+            print(f"{directory} directory already exists")
     return True
 
 def check_environment_variables():
@@ -100,16 +102,16 @@ def check_environment_variables():
             missing_vars.append(var)
     
     if missing_vars:
-        print("⚠️  Missing environment variables:")
+        print("Missing environment variables:")
         for var in missing_vars:
-            print(f"   ❌ {var}")
-        print("\n📝 Please set these environment variables for Supabase integration:")
+            print(f" {var}")
+        print("\nPlease set these environment variables for Supabase integration:")
         print("   export SUPABASE_URL='your-supabase-url'")
         print("   export SUPABASE_ANON_KEY='your-anon-key'")
         print("   export SUPABASE_SERVICE_ROLE_KEY='your-service-role-key'  # For admin operations")
         return False
     else:
-        print("✅ All required environment variables are set")
+        print("All required environment variables are set")
         return True
 
 def setup_supabase_database():
@@ -122,17 +124,17 @@ def setup_supabase_database():
     else:
         python_path = os.path.join("venv", "bin", "python")
     
-    print("\n🔧 Setting up Supabase database...")
+    print("\nSetting up Supabase database...")
     print("=" * 40)
     
     # Check if environment variables are set
     if not check_environment_variables():
-        print("⚠️  Supabase setup skipped due to missing environment variables")
+        print(" Supabase setup skipped due to missing environment variables")
         return False
     
     # Verify python path exists
     if not os.path.exists(python_path):
-        print(f"❌ Python not found in virtual environment: {python_path}")
+        print(f"Python not found in virtual environment: {python_path}")
         print("   Try recreating the virtual environment with: python -m venv venv")
         return False
     
@@ -141,7 +143,7 @@ def setup_supabase_database():
         command = f'"{python_path}" -m utils.supabase_setup'
         return run_command(command, "Setting up Supabase database tables")
     except Exception as e:
-        print(f"❌ Supabase setup failed: {e}")
+        print(f"Supabase setup failed: {e}")
         return False
 
 def main():
@@ -173,15 +175,15 @@ Examples:
     
     args = parser.parse_args()
     
-    print("🚀 SnapVault Backend Setup")
+    print("SnapVault Backend Setup")
     print("=" * 40)
     
     # If supabase-only, just run Supabase setup
     if args.supabase_only:
         if setup_supabase_database():
-            print("\n🎉 Supabase database setup completed successfully!")
+            print("\nSupabase database setup completed successfully!")
         else:
-            print("\n❌ Supabase database setup failed")
+            print("\nSupabase database setup failed")
             sys.exit(1)
         return
     
@@ -209,11 +211,11 @@ Examples:
     # Setup Supabase if requested
     if args.with_supabase:
         if not setup_supabase_database():
-            print("⚠️  Basic setup completed, but Supabase setup failed")
+            print("Basic setup completed, but Supabase setup failed")
             print("   You can run Supabase setup later with: python setup.py --supabase-only")
     
-    print("\n🎉 Setup completed successfully!")
-    print("\n📋 Next steps:")
+    print("\nSetup completed successfully!")
+    print("\nNext steps:")
     print("1. Activate the virtual environment:")
     if platform.system() == "Windows":
         print("   venv\\Scripts\\activate")
@@ -235,7 +237,7 @@ Examples:
         print("3. Access the API documentation:")
     
     print("   http://localhost:8000/docs")
-    print("\n📚 Documentation:")
+    print("\nDocumentation:")
     print("   • API_DOCUMENTATION.md - Local routes")
     print("   • SUPABASE_API_DOCUMENTATION.md - Supabase routes")
     print("   • SUPABASE_TEST_CASES.md - Test scenarios")

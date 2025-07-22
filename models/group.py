@@ -20,3 +20,4 @@ class Group(Base):
     members = relationship("GroupMember", back_populates="group") 
     photos = relationship("Photo", back_populates="group", cascade="all, delete-orphan")
 
+

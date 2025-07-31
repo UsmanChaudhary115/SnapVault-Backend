@@ -9,4 +9,7 @@ email_validator
 supabase
 python-dotenv
 httpx
-aiofiles 
+aiofiles
+numpy
+insightface==0.7.2
+onnxruntime

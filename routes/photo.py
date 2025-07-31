@@ -80,9 +80,8 @@ async def upload_photos(
     member = db.query(GroupMember).filter_by(
         user_id=current_user.id,
         group_id=group_id
-    ).first()
-    print(f"Current user ID: {current_user.id}, Group ID: {group_id}")
-    print(f"Member: {member}, Role ID: {member.role_id if member else 'None'}")
+    ).first() 
+
     if not member or member.role_id not in [1, 2, 3]:
         raise HTTPException(status_code=403, detail="You are not allowed to upload photos to this group.")
 
@@ -130,7 +129,9 @@ async def upload_photos(
                     # Update embedding by averaging
                     new_embedding = (embedding + existing_embedding) / 2
                     existing.embedding = json.dumps(new_embedding.tolist())
+                    existing.embedding_count += 1
                     db.commit()
+
 
                     # Create association record linking this face with current photo
                     association = PhotoFace(photo_id=photo.id, face_id=existing.id)
@@ -165,7 +166,7 @@ def get_group_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_
  
     member = db.query(GroupMember).filter_by(user_id=current_user.id, group_id=group_id).first()
     if not member or member.role_id not in [1, 2, 3, 4]:  # Assuming roles 1, 2, 3, and 4 can view all photos
-        raise HTTPException(status_code=403, detail="You are not allowed to view photos in this group")
+        raise HTTPException(status_code=403, detail="You are not allowed to view all photos in this group")
 
     photos = db.query(Photo).filter_by(group_id=group_id).all()
     return photos
@@ -183,13 +184,13 @@ def get_my_photos(db: Session = Depends(get_db), current_user: User = Depends(ge
 @router.get("/my/photos/{group_id}", response_model=list[PhotoOut])
 def get_my_photos_in_group(group_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
  
-    # memberShip = db.query(GroupMember).filter_by(
-    #     user_id=current_user.id,
-    #     group_id=group_id
-    # ).first() 
+    memberShip = db.query(GroupMember).filter_by(
+        user_id=current_user.id,
+        group_id=group_id
+    ).first() 
 
-    # if not memberShip:   
-    #     raise HTTPException(status_code=403, detail="You are not allowed to view photos in this group")
+    if not memberShip:   
+        raise HTTPException(status_code=403, detail="You are not a member of this group")
     
     user_face = db.query(Face).filter(Face.user_id == current_user.id).first()
     if not user_face:
@@ -229,4 +230,35 @@ def get_photo(
         raise HTTPException(status_code=403, detail="You are not allowed to view this photo")
 
     return photo
+
+
+@router.delete("/delete/{photo_id}/group/{group_id}", response_model=PhotoOut)
+def delete_photo_from_group(
+    photo_id: int = Path(..., gt=0),
+    group_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),  
+    current_user: User = Depends(get_current_user)
+
+):
+    is_member = db.query(GroupMember).filter_by(
+        user_id=current_user.id,
+        group_id=group_id
+    ).first()
+    if not is_member or is_member.role_id not in [1, 2]:
+        raise HTTPException(status_code=403, detail="You are not allowed to delete this photo")
+    
+    photo = db.query(Photo).filter(Photo.id == photo_id, Photo.group_id == group_id).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found in this group")
+
+    #Need to delete the association first
+    photo_faces = db.query(PhotoFace).filter(PhotoFace.photo_id == photo.id).first()
+    if photo_faces:
+        db.delete(photo_faces)
+        db.commit()
+
+    db.delete(photo)
+    db.commit()
+     
+    return photo    
 

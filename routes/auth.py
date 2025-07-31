@@ -5,13 +5,12 @@ from database import get_db
 from models.faces import Face
 from models.user import User
 from models.revoked_token import RevokedToken
-from schemas.user import UserCreate, UserLogin, UserOut, PasswordUpdate
+from schemas.user import UserLogin, UserOut, PasswordUpdate
 from utils.hash import hash_password, verify_password
 from utils.jwt import create_access_token
 from utils.auth_utils import get_current_user
 from passlib.context import CryptContext   
-from sqlalchemy.exc import SQLAlchemyError
-#from insightface.app import FaceAnalysis
+from sqlalchemy.exc import SQLAlchemyError 
 import cv2, uuid, json, os
 import numpy as np  
 from sklearn.metrics.pairwise import cosine_similarity 
@@ -21,9 +20,7 @@ from insightface.app import FaceAnalysis
 face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
  
-# app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
-# app.prepare(ctx_id=0)
-
+ 
 router = APIRouter() 
 
 UPLOAD_PROFILE_DIR = "uploads/profile_pictures" 
@@ -90,16 +87,16 @@ async def register(
     profile_pic_name = f"{uuid.uuid4()}.{ext}"
     profile_pic_path = os.path.join(UPLOAD_PROFILE_DIR, profile_pic_name)
 
-    # Save uploaded file to disk
+    # Saving uploaded file to disk
     with open(profile_pic_path, "wb") as f:
         f.write(await file.read())
 
-    # Read image and detect faces
+    # Reading image and detect faces
     img = cv2.imread(profile_pic_path)
     faces = face_app.get(img)
 
     if len(faces) != 1:
-        # Delete saved profile pic, rollback user creation if any, and raise error
+        # Deleting saved profile pic, rollback user creation if any, and raise error
         os.remove(profile_pic_path)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,9 +106,9 @@ async def register(
     new_embedding = faces[0].embedding
 
     try:
-        # Use a transaction to rollback everything if any step fails
+        # Using a transaction to rollback everything if any step fails
         with db.begin_nested():
-            # Create user
+            # Creating user
             new_user = User(
                 name=name,
                 email=email,
@@ -119,9 +116,9 @@ async def register(
                 profile_picture=profile_pic_path
             )
             db.add(new_user)
-            db.flush()  # flush to get new_user.id without commit
+            db.flush()  # flushing to get new_user.id without commit
 
-            # Check orphan faces and try to match
+            # Checking orphan faces and try to match
             orphan_faces = db.query(Face).filter(Face.user_id == None).all()
 
             match_found = False
@@ -140,7 +137,7 @@ async def register(
                     break
 
             if not match_found:
-                # Create new face linked to user
+                # Creating new face linked to user
                 face = Face(
                     embedding=json.dumps(new_embedding.tolist()),
                     embedding_count=1,
@@ -148,11 +145,11 @@ async def register(
                 )
                 db.add(face)
 
-        db.commit()  # commit transaction if all OK
+        db.commit()  # committing transaction if all OK
 
     except SQLAlchemyError as e:
         db.rollback()
-        # Remove saved profile picture on failure
+        # Removing saved profile picture on failure
         if os.path.exists(profile_pic_path):
             os.remove(profile_pic_path)
         raise HTTPException(status_code=500, detail="Registration failed, please try again.")

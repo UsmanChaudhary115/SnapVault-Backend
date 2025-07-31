@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal 
 from routes import auth, group, photo, testing, user, supabase_auth, supabase_user, supabase_group, supabase_photo
 from utils.seed_roles import seed_roles
@@ -18,7 +20,18 @@ Base.metadata.create_all(bind=engine)
 with SessionLocal() as db:
     seed_roles(db)
 
- 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files for uploads folder
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads") 
+
 # Local routes
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(user.router, prefix="/user", tags=["User"])
@@ -28,10 +41,10 @@ app.include_router(testing.router, prefix="/testing", tags=["Testing"])
 
 
 # Supabase routes (using /supabase prefix to avoid conflicts)
-app.include_router(supabase_auth.router, prefix="/supabase/auth", tags=["Supabase Auth"])
-app.include_router(supabase_user.router, prefix="/supabase/user", tags=["Supabase User"])
-app.include_router(supabase_group.router, prefix="/supabase/groups", tags=["Supabase Groups"])
-app.include_router(supabase_photo.router, prefix="/supabase/photos", tags=["Supabase Photos"])
+# app.include_router(supabase_auth.router, prefix="/supabase/auth", tags=["Supabase Auth"])
+# app.include_router(supabase_user.router, prefix="/supabase/user", tags=["Supabase User"])
+# app.include_router(supabase_group.router, prefix="/supabase/groups", tags=["Supabase Groups"])
+# app.include_router(supabase_photo.router, prefix="/supabase/photos", tags=["Supabase Photos"])
 
 
 

@@ -3,6 +3,9 @@ from jose import JWTError, jwt
 from models.group import Group
 from models.group_member import GroupMember
 from models.revoked_token import RevokedToken
+from models.groupClaims import GroupClaim
+from models.groupRoles import GroupRole
+from models.groupRoleClaim import GroupRoleClaim 
 from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
@@ -82,12 +85,15 @@ def is_super_admin(id: int, current_user: User = Depends(get_current_user), db: 
         ) 
     return member
 
-# def is_active_group(id: int, db: Session = Depends(get_db)):
-#     group = db.query(Group).filter(Group.id == id).first()
-#     if not group:
-#         raise HTTPException(status_code=404, detail="Group not found")
-    
-#     if not group.is_active:
-#         raise HTTPException(status_code=400, detail="Group is not active")
-    
-#     return group
+def authorize(role_id: int, db: Session = Depends(get_db)):
+    claims = (
+        db.query(GroupClaim)
+        .join(GroupRoleClaim, GroupRoleClaim.claim_id == GroupClaim.id)
+        .filter(GroupRoleClaim.role_id == role_id)
+        .all()
+    )
+
+    if not claims:
+        raise HTTPException(status_code=404, detail="No claims found for this role")
+
+    return claims

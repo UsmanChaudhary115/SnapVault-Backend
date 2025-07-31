@@ -6,3 +6,5 @@ from .photo_face import PhotoFace
 from .faces import Face
 from .revoked_token import RevokedToken 
 from .groupRoles import GroupRole
+from .groupClaims import GroupClaim
+from .groupRoleClaim import GroupRoleClaim

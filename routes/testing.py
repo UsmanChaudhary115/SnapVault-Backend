@@ -8,7 +8,7 @@ from models.group_member import GroupMember
 from schemas.group import GroupCreate, GroupJoin, GroupOut, GroupUpdate
 from utils.auth_utils import get_current_user
 from models.user import User
-
+from utils.auth_utils import authorize
 router = APIRouter()
  
 @router.get("allGroups", response_model=list[GroupOut])
@@ -20,3 +20,11 @@ def get_all_groups(db: Session = Depends(get_db)):
 def get_all_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
+
+
+@router.get("/{role_id}/claims", response_model=list[str])
+def get_role_claims(role_id: int, db: Session = Depends(get_db)):
+    claims = authorize(role_id, db)
+    if not claims:
+        raise HTTPException(status_code=404, detail="No claims found for this role")    
+    return [claim.name for claim in claims]

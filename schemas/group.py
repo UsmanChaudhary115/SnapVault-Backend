@@ -16,6 +16,7 @@ class GroupOut(BaseModel):
     invite_code: str
     created_at: datetime
     description: Optional[str] = None
+    number_of_members: Optional[int]
     creator: UserOut
 
     class Config:

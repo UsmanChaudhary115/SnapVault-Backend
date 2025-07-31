@@ -1,6 +1,7 @@
 from email_validator import validate_email, EmailNotValidError
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session
+from constants import THRESHOLD, UPLOAD_PROFILE_DIR
 from database import get_db
 from models.faces import Face
 from models.user import User
@@ -23,45 +24,8 @@ face_app.prepare(ctx_id=0)
  
 router = APIRouter() 
 
-UPLOAD_PROFILE_DIR = "uploads/profile_pictures" 
-THRESHOLD = 0.6
-# @router.post("/register", response_model=UserOut)
-# async def register(
-#     name: str = Form(...),
-#     email: str = Form(...),
-#     password: str = Form(...),
-#     file: UploadFile = File(...),  # profile picture
-#     db: Session = Depends(get_db)
-# ):
-#     email = email.strip().upper() 
-#     try:
-#         validate_email(email)
-#     except EmailNotValidError:
-#         raise HTTPException(status_code=400, detail="Invalid email format")
 
-#     if db.query(User).filter(User.email == email).first():
-#         raise HTTPException(status_code=400, detail="Email already exists")
 
-#     ext = file.filename.split('.')[-1].lower()
-#     if ext not in ['jpg', 'jpeg', 'png']:
-#         raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.")
-
-#     profile_pic_name = f"{uuid.uuid4()}.{ext}"
-#     profile_pic_path = os.path.join(UPLOAD_PROFILE_DIR, profile_pic_name)
-
-#     with open(profile_pic_path, "wb") as f:
-#         f.write(await file.read())
-
-#     new_user = User(
-#         name=name,
-#         email=email,
-#         hashed_password=hash_password(password), 
-#         profile_picture=profile_pic_path
-#     )
-#     db.add(new_user)
-#     db.commit()
-#     db.refresh(new_user)
-#     return new_user
 
 @router.post("/register", response_model=UserOut)
 async def register(
@@ -118,21 +82,29 @@ async def register(
             db.add(new_user)
             db.flush()  # flushing to get new_user.id without commit
 
-            # Checking orphan faces and try to match
-            orphan_faces = db.query(Face).filter(Face.user_id == None).all()
+            # Checking existing faces and try to match
+            faces = db.query(Face).all()
 
             match_found = False
-            for face_record in orphan_faces:
+            for face_record in faces:
                 stored_embedding = np.array(json.loads(face_record.embedding))
                 sim_score = cosine_similarity([new_embedding], [stored_embedding])[0][0]
 
                 if sim_score >= THRESHOLD:
+                    #Trying to prevent face duplication
+                    if face_record.user_id is not None:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="This face is already associated with another user."
+                        )
+                    
                     count = face_record.embedding_count or 1
                     updated_embedding = (stored_embedding * count + new_embedding) / (count + 1)
 
                     face_record.embedding = json.dumps(updated_embedding.tolist())
                     face_record.embedding_count = count + 1
                     face_record.user_id = new_user.id
+                    
                     match_found = True
                     break
 

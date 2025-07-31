@@ -2,6 +2,7 @@ import json
 from typing import List
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
+from constants import THRESHOLD, UPLOAD_DIR
 from database import get_db
 from models.group_member import GroupMember
 from models.photo_face import PhotoFace
@@ -16,58 +17,14 @@ import numpy as np
 from models import Photo, GroupMember, Face  
 from insightface.app import FaceAnalysis
 from sklearn.metrics.pairwise import cosine_similarity
-
+from utils.auth_utils import authorize
+from constants import *
  
 
 face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
 
 router = APIRouter()
-
-UPLOAD_DIR = "uploads/photos" 
-THRESHOLD = 0.6
-
- 
-# @router.post("/upload", response_model=List[PhotoOut])
-# async def upload_photos(
-#     group_id: int = Form(...),
-#     files: List[UploadFile] = File(...),
-#     db: Session = Depends(get_db),
-#     caller = Depends(is_admin_or_higher)
-# ):
-#     member = db.query(GroupMember).filter_by(
-#         user_id=caller.id,
-#         group_id=group_id
-#     ).first()   
-#     if not member.role_id in [1, 2, 3]:  # Assuming roles 1, 2 and 3 are allowed to upload photos
-#         raise HTTPException(status_code=403, detail="You are not allowed to upload photos to this group.")
-
- 
-#     ext = file.filename.split(".")[-1].lower()
-#     if ext not in ["jpg", "jpeg", "png"]:
-#         raise HTTPException(status_code=400, detail="Only JPG and PNG files are allowed.")
-
- 
-#     filename = f"{uuid.uuid4()}.{ext}"
-#     save_path = os.path.join(UPLOAD_DIR, filename)
-
-#     with open(save_path, "wb") as f:
-#         f.write(await file.read())
-
- 
-#     photo = Photo(
-#         group_id=group_id,
-#         uploader_id=caller.id,
-#         file_path=save_path
-#     )
-#     db.add(photo)
-#     db.commit()
-#     db.refresh(photo)
-
-#     return photo
-
-
-
 
 
 @router.post("/upload", response_model=List[PhotoOut])
@@ -82,9 +39,14 @@ async def upload_photos(
         group_id=group_id
     ).first() 
 
-    if not member or member.role_id not in [1, 2, 3]:
-        raise HTTPException(status_code=403, detail="You are not allowed to upload photos to this group.")
 
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not authorized to upload photos to this group.")
+
+    claims = authorize(member.role_id, db)
+    if not any(claim.id == CLAIM_UPLOAD_PHOTOS for claim in claims):
+        raise HTTPException(status_code=403, detail="You are not authorized to upload photos to this group.")
+    
     if not os.path.exists(UPLOAD_DIR):
         os.makedirs(UPLOAD_DIR)
 
@@ -165,9 +127,13 @@ def get_group_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Group not found")
  
     member = db.query(GroupMember).filter_by(user_id=current_user.id, group_id=group_id).first()
-    if not member or member.role_id not in [1, 2, 3, 4]:  # Assuming roles 1, 2, 3, and 4 can view all photos
-        raise HTTPException(status_code=403, detail="You are not allowed to view all photos in this group")
-
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not authorized to view all photos in this group")
+    
+    claims = authorize(member.role_id, db)
+    if not any(claim.id == CLAIM_VIEW_ALL_PHOTOS for claim in claims):
+        raise HTTPException(status_code=403, detail="You are not authorized to view all photos in this group")
+    
     photos = db.query(Photo).filter_by(group_id=group_id).all()
     return photos
 
@@ -191,10 +157,10 @@ def get_my_photos_in_group(group_id: int, db: Session = Depends(get_db), current
 
     if not memberShip:   
         raise HTTPException(status_code=403, detail="You are not a member of this group")
-    
+
     user_face = db.query(Face).filter(Face.user_id == current_user.id).first()
     if not user_face:
-        raise HTTPException(404, "No face found for this user")
+        return []
 
     matched_photo_ids = (
         db.query(PhotoFace.photo_id)
@@ -238,27 +204,24 @@ def delete_photo_from_group(
     group_id: int = Path(..., gt=0),
     db: Session = Depends(get_db),  
     current_user: User = Depends(get_current_user)
-
 ):
     is_member = db.query(GroupMember).filter_by(
         user_id=current_user.id,
         group_id=group_id
     ).first()
-    if not is_member or is_member.role_id not in [1, 2]:
-        raise HTTPException(status_code=403, detail="You are not allowed to delete this photo")
+
+    if not is_member:   
+        raise HTTPException(status_code=403, detail="You are not authorized to delete this photo from the group")
+    
+    claims = authorize(is_member.role_id, db)
+    if not any(claim.id == CLAIM_DELETE_PHOTOS for claim in claims):
+        raise HTTPException(status_code=403, detail="You are not authorized to delete this photo from the group")
     
     photo = db.query(Photo).filter(Photo.id == photo_id, Photo.group_id == group_id).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found in this group")
-
-    #Need to delete the association first
-    photo_faces = db.query(PhotoFace).filter(PhotoFace.photo_id == photo.id).first()
-    if photo_faces:
-        db.delete(photo_faces)
-        db.commit()
-
+ 
     db.delete(photo)
     db.commit()
      
-    return photo    
-
+    return photo

@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal 
 from routes import auth, group, photo, testing, user, supabase_auth, supabase_user, supabase_group, supabase_photo
-from utils.seed_roles import seed_roles
+from utils.seed_db import seed_roles, seed_group_claims, seed_group_role_claims
 import os
 
 
@@ -19,6 +19,9 @@ Base.metadata.create_all(bind=engine)
  
 with SessionLocal() as db:
     seed_roles(db)
+    seed_group_claims(db)
+    seed_group_role_claims(db)
+
 
 # Add CORS middleware
 app.add_middleware(

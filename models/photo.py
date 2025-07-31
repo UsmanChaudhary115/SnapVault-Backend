@@ -13,5 +13,5 @@ class Photo(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     group = relationship("Group", back_populates="photos")
-    uploader = relationship("User", back_populates="uploaded_photos")
-    faces = relationship("PhotoFace", back_populates="photo")
+    uploader = relationship("User", back_populates="uploaded_photos") 
+    faces = relationship("PhotoFace", back_populates="photo", cascade="all, delete-orphan")

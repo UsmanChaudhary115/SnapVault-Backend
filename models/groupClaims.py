@@ -1,11 +1,11 @@
+from database import Base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from database import Base
 
-class GroupRole(Base):
-    __tablename__ = "group_roles"
+class GroupClaim(Base):
+    __tablename__ = "group_claims"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=False)
     name = Column(String, unique=True, nullable=False)
-
-    claims = relationship("GroupRoleClaim", back_populates="role")
+ 
+    roles = relationship("GroupRoleClaim", back_populates="claim")

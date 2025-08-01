@@ -24,28 +24,55 @@ def is_active_group(id: int, db: Session = Depends(get_db)):
     
     return group
 
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    if db.query(RevokedToken).filter_by(token=token).first():
+         status_code=status.HTTP_401_UNAUTHORIZED,
+         detail="Could not validate credentials",
+         headers={"WWW-Authenticate": "Bearer"},
+) 
+    if token.startswith("Bearer "):
+        token = token.split("Bearer ")[1].strip()
+
+    if db.query(RevokedToken).filter_by(token=token).first(): 
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
-    
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM]) 
         email: str = payload.get("sub")
-        if email is None:
+        if email is None: 
             raise credentials_exception
-    except JWTError:
+    except JWTError as e: 
         raise credentials_exception
 
     user = db.query(User).filter(User.email == email).first()
-    if user is None:
+    if user is None: 
         raise credentials_exception
 
     return user
+    
+# def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+#     credentials_exception = HTTPException(
+#         status_code=status.HTTP_401_UNAUTHORIZED,
+#         detail="Could not validate credentials",
+#         headers={"WWW-Authenticate": "Bearer"},
+#     )
+#     if db.query(RevokedToken).filter_by(token=token).first():
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+    
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         email: str = payload.get("sub")
+#         if email is None:
+#             raise credentials_exception
+#     except JWTError:
+#         raise credentials_exception
+
+#     user = db.query(User).filter(User.email == email).first()
+#     if user is None:
+#         raise credentials_exception
+
+#     return user
 
 
 def is_admin_or_higher(

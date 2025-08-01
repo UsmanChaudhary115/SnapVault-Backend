@@ -35,9 +35,9 @@ async def register(
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    email = email.strip().upper()
+    email = email.strip().lower()
     try:
-        validate_email(email)
+        validate_email(email) 
     except EmailNotValidError:
         raise HTTPException(status_code=400, detail="Invalid email format")
 
@@ -64,7 +64,7 @@ async def register(
         os.remove(profile_pic_path)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Profile picture must contain exactly one face. Detected: {len(faces)}"
+            detail=f"Profile picture must contain exactly one face"
         )
 
     new_embedding = faces[0].embedding
@@ -95,7 +95,7 @@ async def register(
                     if face_record.user_id is not None:
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="This face is already associated with another user."
+                            detail="This face is already associated with another user"
                         )
                     
                     count = face_record.embedding_count or 1
@@ -132,7 +132,7 @@ async def register(
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     
-    user.email = user.email.strip().upper() 
+    user.email = user.email.strip().lower() 
 
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
@@ -149,23 +149,23 @@ def update_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-        # 1. Check if current password is correct
-        if not pwd_context.verify(data.current_password, current_user.hashed_password):
+        # Checking if current password is correct  
+        if not verify_password(data.current_password, current_user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Current password is incorrect"
             )
 
-        # 2. Prevent reuse of old password
-        if pwd_context.verify(data.new_password, current_user.hashed_password):
+        # Preventing reuse of old password
+        if verify_password(data.new_password, current_user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="New password must be different from the current password"
             )
  
 
-        # 3b. Hash and update
-        hashed_new_password = pwd_context.hash(data.new_password)
+        # Hashing and updating the new password
+        hashed_new_password = hash_password(data.new_password)
         current_user.hashed_password = hashed_new_password
         db.commit()
         db.refresh(current_user)
@@ -177,14 +177,15 @@ def update_password(
 def logout(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     auth_header = request.headers.get("Authorization")
 
-    if not auth_header:
-        raise HTTPException(status_code=401, detail="Invalid token header")
+    # if not auth_header or not auth_header.startswith("Bearer "):
+    #     raise HTTPException(status_code=401, detail="Invalid token header")
+    token = auth_header
+    if token.startswith("Bearer "):
+        token = token.split("Bearer ")[1].strip() 
 
-
- 
-    if db.query(RevokedToken).filter_by(token=auth_header).first():
+    if db.query(RevokedToken).filter_by(token=token).first():
         raise HTTPException(status_code=400, detail="Token already revoked")
- 
-    db.add(RevokedToken(token=auth_header))
+
+    db.add(RevokedToken(token=token))
     db.commit()
     return {"message": "Logged out successfully"}

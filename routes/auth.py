@@ -18,8 +18,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 from insightface.app import FaceAnalysis
 
 # Setup insightface model (CPU only)
-face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+# face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+# face_app.prepare(ctx_id=0) 
+
+face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
+
  
  
 router = APIRouter() 

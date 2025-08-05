@@ -8,7 +8,7 @@ from models.group_member import GroupMember
 from models.photo_face import PhotoFace
 from models.user import User
 from models.group import Group
-from utils.auth_utils import get_current_user, is_admin_or_higher
+from utils.auth_utils import get_current_user
 from schemas.photo import PhotoOut
 import uuid
 import os 
@@ -21,11 +21,12 @@ from utils.auth_utils import authorize
 from constants import *
  
 
-face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+# face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+# face_app.prepare(ctx_id=0)
+face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
 
 router = APIRouter()
-
 
 @router.post("/upload", response_model=List[PhotoOut])
 async def upload_photos(
@@ -119,7 +120,6 @@ async def upload_photos(
                 db.commit()
 
     return photos_out
-
 @router.get("/group/{group_id}", response_model=list[PhotoOut])
 def get_group_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     is_group = db.query(Group).filter(Group.id == group_id).first()

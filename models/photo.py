@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -11,6 +11,7 @@ class Photo(Base):
     uploader_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     file_path = Column(String, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    isHighlighted = Column(Boolean, default=False)
 
     group = relationship("Group", back_populates="photos")
     uploader = relationship("User", back_populates="uploaded_photos") 

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal 
-from routes import auth, group, photo, testing, user, supabase_auth, supabase_user, supabase_group, supabase_photo
+from routes import auth, group, photo, user 
 from utils.seed_db import seed_roles, seed_group_claims, seed_group_role_claims
 import os
 
@@ -15,7 +15,7 @@ def create_required_folders():
 
 app = FastAPI()
 create_required_folders()
-Base.metadata.create_all(bind=engine)
+#Base.metadata.create_all(bind=engine)
  
 with SessionLocal() as db:
     seed_roles(db)
@@ -39,17 +39,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(user.router, prefix="/user", tags=["User"])
 app.include_router(group.router, prefix="/groups", tags=["Groups"])
-app.include_router(photo.router, prefix="/photos", tags=["Photos"])
-app.include_router(testing.router, prefix="/testing", tags=["Testing"])
-
-
-# Supabase routes (using /supabase prefix to avoid conflicts)
-# app.include_router(supabase_auth.router, prefix="/supabase/auth", tags=["Supabase Auth"])
-# app.include_router(supabase_user.router, prefix="/supabase/user", tags=["Supabase User"])
-# app.include_router(supabase_group.router, prefix="/supabase/groups", tags=["Supabase Groups"])
-# app.include_router(supabase_photo.router, prefix="/supabase/photos", tags=["Supabase Photos"])
-
-
+app.include_router(photo.router, prefix="/photos", tags=["Photos"])  
 
 
 @app.get("/")

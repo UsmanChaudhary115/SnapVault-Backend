@@ -6,7 +6,7 @@ from database import get_db
 from models.group import Group 
 from models.group_member import GroupMember
 from schemas.group import GroupCreate, GroupJoin, GroupOut, GroupUpdate
-from utils.auth_utils import authorize, get_current_user, is_admin_or_higher, is_super_admin, is_active_group
+from utils.auth_utils import authorize, get_current_user 
 from models.user import User
 from constants import *
 

@@ -39,9 +39,7 @@ s3transfer==0.13.1
 # AI / Face Recognition / CV
 numpy==2.2.6
 insightface==0.7.2
-onnxruntime
-cv2
-opencv-python==4.12.0.88
+onnxruntime 
 opencv-python-headless==4.12.0.88
 opencv-contrib-python==4.11.0.86
 imageio==2.37.0

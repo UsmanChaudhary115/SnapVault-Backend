@@ -101,7 +101,7 @@ def get_group(
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="You are not authorized to view group details")
- 
+    group.number_of_members = db.query(GroupMember).filter(GroupMember.group_id == group.id).count()
     return group
 
 @router.get("/{id}/members")

@@ -1,13 +1,18 @@
 from fastapi import HTTPException
 from fastapi import APIRouter, Depends, status #type: ignore
 from sqlalchemy.orm import Session  #type: ignore
+from constants import BACKBLAZE_BUCKET_NAME
 from database import get_db
+from models.faces import Face
+from models.photo import Photo
+from models.photo_face import PhotoFace
 from models.user import User 
 from models.group import Group
 from models.group_member import GroupMember
 from schemas.user import UserOut, UpdateUser, PasswordUpdate
 from utils.auth_utils import get_current_user 
 from email_validator import validate_email, EmailNotValidError 
+from utils.backBlaze_utils import generate_presigned_url
 from utils.hash import verify_password, hash_password
 
 
@@ -21,6 +26,7 @@ def update_bio(updatedBio: str, db: Session = Depends(get_db), current_user: Use
 
 @router.get("/profile", response_model=UserOut)
 def read_current_user(current_user: User = Depends(get_current_user)):
+    current_user.profile_picture = generate_presigned_url(BACKBLAZE_BUCKET_NAME, current_user.profile_picture)
     return current_user
 
 
@@ -109,3 +115,19 @@ def update_password(
         db.refresh(current_user)
 
         return {"message": "Password updated successfully"}
+
+
+@router.get("/user_stats")
+def get_user_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    total_groups = db.query(GroupMember).filter(GroupMember.user_id == current_user.id).count()
+
+    face = db.query(Face).filter(Face.user_id == current_user.id).first()
+    total_photos = 0
+
+    if face:
+        total_photos = db.query(PhotoFace).filter(PhotoFace.face_id == face.id).count()
+
+    return {
+        "total_groups": total_groups,
+        "total_photos": total_photos
+    }

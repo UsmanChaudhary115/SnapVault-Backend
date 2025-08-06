@@ -23,19 +23,11 @@ from utils.highlight_utils import evaluate_image_quality
 from utils.backBlaze_utils import s3_client, generate_presigned_url
  
 
-# face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
-# face_app.prepare(ctx_id=0)
 face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
 
 router = APIRouter()
 
-# s3_client = boto3.client(
-#     's3',
-#     aws_access_key_id=BACKBLAZE_ACCESS_KEY,
-#     aws_secret_access_key=BACKBLAZE_SECRET_KEY,
-#     endpoint_url=BACKBLAZE_ENDPOINT,
-# )
 @router.post("/upload", response_model=List[PhotoOut])
 async def upload_photos(
     group_id: int = Form(...),
@@ -100,8 +92,8 @@ async def upload_photos(
         db.refresh(photo)
         photos_out.append(photo)
 
-        # Detect faces 
-        if face_present== False:
+        # Detecting faces, if any face is present, then add it to the database 
+        if face_present == False:
             continue
 
         all_faces = db.query(Face).all()
@@ -174,6 +166,10 @@ def get_my_photos(db: Session = Depends(get_db), current_user: User = Depends(ge
         raise HTTPException(status_code=404, detail="Face not found for the current user")
     photo_faces = db.query(PhotoFace).filter(PhotoFace.face_id == face.id).all()
     photos = db.query(Photo).filter(Photo.id.in_([pf.photo_id for pf in photo_faces])).all() 
+    if not photos:
+        return []
+    for photo in photos:
+        photo.file_path = generate_presigned_url(BACKBLAZE_BUCKET_NAME, photo.file_path)
     return photos
 
 
@@ -204,6 +200,10 @@ def get_my_photos_in_group(group_id: int, db: Session = Depends(get_db), current
         .filter(Photo.group_id == group_id, Photo.id.in_(matched_photo_ids))
         .all()
     ) 
+    if not matched_photos:
+        return []
+    for photo in matched_photos:
+        photo.file_path = generate_presigned_url(BACKBLAZE_BUCKET_NAME, photo.file_path)
     return matched_photos 
 
 @router.get("/highlights/{group_id}", response_model=list[PhotoOut])
@@ -230,9 +230,6 @@ def get_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    photo = db.query(Photo).filter(Photo.id == photo_id).first()
-    if not photo:
-        raise HTTPException(status_code=404, detail="Photo not found")
  
     is_member = db.query(GroupMember).filter_by(
         user_id=current_user.id,
@@ -240,6 +237,12 @@ def get_photo(
     ).first()
     if not is_member:
         raise HTTPException(status_code=403, detail="You are not allowed to view this photo")
+    
+    photo = db.query(Photo).filter(Photo.id == photo_id).first()
+    if not photo:
+        return []
+    
+    photo.file_path = generate_presigned_url(BACKBLAZE_BUCKET_NAME, photo.file_path)
 
     return photo
 
@@ -266,7 +269,11 @@ def delete_photo_from_group(
     photo = db.query(Photo).filter(Photo.id == photo_id, Photo.group_id == group_id).first()
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found in this group")
- 
+    try:
+        s3_client.delete_object(Bucket=BACKBLAZE_BUCKET_NAME, Key=photo.file_path)
+        print(f"Deleted from B2: {photo.file_path}")
+    except Exception as e:
+        print(f"Failed to delete {photo.file_path} from B2:", e)
     db.delete(photo)
     db.commit()
      

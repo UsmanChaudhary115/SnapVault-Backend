@@ -7,14 +7,9 @@ from utils.seed_db import seed_roles, seed_group_claims, seed_group_role_claims
 import os
 
 
-def create_required_folders():
-    os.makedirs("uploads", exist_ok=True)
-    os.makedirs("uploads/profile_pictures", exist_ok=True)
-    os.makedirs("uploads/photos", exist_ok=True)
 
 
-app = FastAPI()
-create_required_folders()
+app = FastAPI() 
 #Base.metadata.create_all(bind=engine)
  
 with SessionLocal() as db:
@@ -31,9 +26,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Mount static files for uploads folder
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads") 
+ 
 
 # Local routes
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])

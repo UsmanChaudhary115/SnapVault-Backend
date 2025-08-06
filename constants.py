@@ -26,3 +26,18 @@ CLAIM_DELETE_PHOTOS = 14
 UPLOAD_PROFILE_DIR = "uploads/profile_pictures" 
 THRESHOLD = 0.6
 UPLOAD_DIR = "uploads/photos"
+
+
+# Backblaze B2 Configuration
+BACKBLAZE_ACCESS_KEY = '0066745095b4eb50000000001'
+BACKBLAZE_SECRET_KEY = 'K006d2ySktCZGM+L/HfRcTMCp2BJWHw'
+BACKBLAZE_ENDPOINT = 'https://s3.ca-east-006.backblazeb2.com'
+BACKBLAZE_BUCKET_NAME = 'SnapVault-Storage'
+
+
+# File Size Limit for profile picture
+MAX_FILE_SIZE_BYTES_PROFILE_PICTURE = 2 * 1024 * 1024
+
+
+# Highlighting Constants
+HIGHLIGHT_THRESHOLD = 3.0

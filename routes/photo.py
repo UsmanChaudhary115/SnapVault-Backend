@@ -1,6 +1,8 @@
 import json
 from typing import List
+import boto3
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Path
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from constants import THRESHOLD, UPLOAD_DIR
 from database import get_db
@@ -10,15 +12,15 @@ from models.user import User
 from models.group import Group
 from utils.auth_utils import get_current_user
 from schemas.photo import PhotoOut
-import uuid
-import os 
-import cv2
+import uuid, cv2
 import numpy as np  
 from models import Photo, GroupMember, Face  
 from insightface.app import FaceAnalysis
 from sklearn.metrics.pairwise import cosine_similarity
 from utils.auth_utils import authorize
 from constants import *
+from utils.highlight_utils import evaluate_image_quality 
+from utils.backBlaze_utils import s3_client, generate_presigned_url
  
 
 # face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
@@ -28,6 +30,12 @@ face_app.prepare(ctx_id=0)
 
 router = APIRouter()
 
+# s3_client = boto3.client(
+#     's3',
+#     aws_access_key_id=BACKBLAZE_ACCESS_KEY,
+#     aws_secret_access_key=BACKBLAZE_SECRET_KEY,
+#     endpoint_url=BACKBLAZE_ENDPOINT,
+# )
 @router.post("/upload", response_model=List[PhotoOut])
 async def upload_photos(
     group_id: int = Form(...),
@@ -43,41 +51,58 @@ async def upload_photos(
 
     if not member:
         raise HTTPException(status_code=403, detail="You are not authorized to upload photos to this group.")
-
+    group = db.query(Group).filter(Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
     claims = authorize(member.role_id, db)
     if not any(claim.id == CLAIM_UPLOAD_PHOTOS for claim in claims):
         raise HTTPException(status_code=403, detail="You are not authorized to upload photos to this group.")
-    
-    if not os.path.exists(UPLOAD_DIR):
-        os.makedirs(UPLOAD_DIR)
 
     photos_out = []
 
     for file in files:
-        ext = file.filename.split(".")[-1].lower()
-        if ext not in ["jpg", "jpeg", "png"]:
-            raise HTTPException(status_code=400, detail="Only JPG and PNG files are allowed.")
+        ext = file.filename.split('.')[-1].lower()
+        if ext not in ['jpg', 'jpeg', 'png']:
+            raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.")
+        
+        filename = f"groups/{group.name}/{uuid.uuid4()}.{ext}" 
+        file_content = await file.read()
+        file_bytes = np.asarray(bytearray(file_content), dtype=np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR) 
 
-        filename = f"{uuid.uuid4()}.{ext}"
-        save_path = os.path.join(UPLOAD_DIR, filename)
+        try:
+            s3_client.put_object(
+                Bucket=BACKBLAZE_BUCKET_NAME,
+                Key=filename,
+                Body=file_content,
+                ContentType=file.content_type
+         )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Internal server error")
 
-        with open(save_path, "wb") as f:
-            f.write(await file.read())
-
+        faces = face_app.get(img)
+        face_present = True
+        if not faces or len(faces) == 0:
+            face_present = False
+            highlight_status = False
+        else:
+            score = evaluate_image_quality(faces, img)
+            highlight_status = (score >= HIGHLIGHT_THRESHOLD)
         # Add photo entry
         photo = Photo(
             group_id=group_id,
             uploader_id=current_user.id,
-            file_path=save_path
+            file_path=filename,
+            isHighlighted=highlight_status
         )
         db.add(photo)
         db.commit()
         db.refresh(photo)
         photos_out.append(photo)
 
-        # Detect faces
-        img = cv2.imread(save_path)
-        faces = face_app.get(img)
+        # Detect faces 
+        if face_present== False:
+            continue
 
         all_faces = db.query(Face).all()
 
@@ -94,7 +119,6 @@ async def upload_photos(
                     existing.embedding = json.dumps(new_embedding.tolist())
                     existing.embedding_count += 1
                     db.commit()
-
 
                     # Create association record linking this face with current photo
                     association = PhotoFace(photo_id=photo.id, face_id=existing.id)
@@ -120,6 +144,7 @@ async def upload_photos(
                 db.commit()
 
     return photos_out
+
 @router.get("/group/{group_id}", response_model=list[PhotoOut])
 def get_group_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     is_group = db.query(Group).filter(Group.id == group_id).first()
@@ -135,6 +160,11 @@ def get_group_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_
         raise HTTPException(status_code=403, detail="You are not authorized to view all photos in this group")
     
     photos = db.query(Photo).filter_by(group_id=group_id).all()
+    if not photos:
+        return []
+    else:
+        for photo in photos:
+            photo.file_path = generate_presigned_url(BACKBLAZE_BUCKET_NAME, photo.file_path)
     return photos
 
 @router.get("/my/photos/all", response_model=list[PhotoOut])
@@ -168,15 +198,31 @@ def get_my_photos_in_group(group_id: int, db: Session = Depends(get_db), current
         .all()
     )
     matched_photo_ids = [pid[0] for pid in matched_photo_ids]
-
+ 
     matched_photos = (
         db.query(Photo)
         .filter(Photo.group_id == group_id, Photo.id.in_(matched_photo_ids))
         .all()
-    )
+    ) 
+    return matched_photos 
 
-    return matched_photos
+@router.get("/highlights/{group_id}", response_model=list[PhotoOut])
+def get_highlighted_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    is_group = db.query(Group).filter(Group.id == group_id).first()
+    if not is_group:    
+        raise HTTPException(status_code=404, detail="Group not found")
 
+    member = db.query(GroupMember).filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not authorized to view highlighted photos in this group")
+    
+    photos = db.query(Photo).filter_by(group_id=group_id, isHighlighted=True).all()
+    if not photos:
+        return []
+    else:
+        for photo in photos:
+            photo.file_path = generate_presigned_url(BACKBLAZE_BUCKET_NAME, photo.file_path)
+    return photos
 
 @router.get("/{photo_id}", response_model=PhotoOut)
 def get_photo(

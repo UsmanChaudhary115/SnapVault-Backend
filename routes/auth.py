@@ -16,19 +16,16 @@ import cv2, uuid, json, os
 import numpy as np  
 from sklearn.metrics.pairwise import cosine_similarity 
 from insightface.app import FaceAnalysis
-
-# Setup insightface model (CPU only)
-# face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
-# face_app.prepare(ctx_id=0) 
+import boto3 
+from utils.backBlaze_utils import s3_client
+from constants import BACKBLAZE_ACCESS_KEY, BACKBLAZE_SECRET_KEY, BACKBLAZE_ENDPOINT, BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
 
 face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
 
- 
- 
-router = APIRouter() 
 
-
+ 
+router = APIRouter()   
 
 
 @router.post("/register", response_model=UserOut)
@@ -50,27 +47,39 @@ async def register(
 
     ext = file.filename.split('.')[-1].lower()
     if ext not in ['jpg', 'jpeg', 'png']:
-        raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.")
+        raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.") 
 
-    profile_pic_name = f"{uuid.uuid4()}.{ext}"
-    profile_pic_path = os.path.join(UPLOAD_PROFILE_DIR, profile_pic_name)
+    profile_pic_name = f"profile_pictures/{uuid.uuid4()}.{ext}"
+    file_content = await file.read()
+    if len(file_content) > MAX_FILE_SIZE_BYTES_PROFILE_PICTURE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Max size is {MAX_FILE_SIZE_BYTES_PROFILE_PICTURE} MB."
+        )
 
-    # Saving uploaded file to disk
-    with open(profile_pic_path, "wb") as f:
-        f.write(await file.read())
-
-    # Reading image and detect faces
-    img = cv2.imread(profile_pic_path)
+    # Use OpenCV to process the image directly from memory 
+    file_bytes = np.asarray(bytearray(file_content), dtype=np.uint8)
+    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     faces = face_app.get(img)
 
-    if len(faces) != 1:
-        # Deleting saved profile pic, rollback user creation if any, and raise error
-        os.remove(profile_pic_path)
+    if len(faces) != 1:  
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Profile picture must contain exactly one face"
         )
-
+    
+    # Upload to S3 (Backblaze B2)
+    try:
+        s3_client.put_object(
+            Bucket=BACKBLAZE_BUCKET_NAME,
+            Key=profile_pic_name,
+            Body=file_content,
+            ContentType=file.content_type
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error")
+    
     new_embedding = faces[0].embedding
 
     try:
@@ -81,7 +90,7 @@ async def register(
                 name=name,
                 email=email,
                 hashed_password=hash_password(password),
-                profile_picture=profile_pic_path
+                profile_picture=profile_pic_name
             )
             db.add(new_user)
             db.flush()  # flushing to get new_user.id without commit
@@ -125,10 +134,14 @@ async def register(
 
     except SQLAlchemyError as e:
         db.rollback()
-        # Removing saved profile picture on failure
-        if os.path.exists(profile_pic_path):
-            os.remove(profile_pic_path)
+        # Remove uploaded profile picture from S3 on database failure
+        try:
+            s3_client.delete_object(Bucket=BACKBLAZE_BUCKET_NAME, Key=profile_pic_name)
+        except Exception as delete_err:
+            print(f"Failed to delete image from S3 after DB error: {delete_err}")
+
         raise HTTPException(status_code=500, detail="Registration failed, please try again.")
+
 
     db.refresh(new_user)
     return new_user
@@ -146,7 +159,6 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 @router.put("/update-password")
 def update_password(
     data: PasswordUpdate,
@@ -180,9 +192,7 @@ def update_password(
 @router.post("/logout")
 def logout(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     auth_header = request.headers.get("Authorization")
-
-    # if not auth_header or not auth_header.startswith("Bearer "):
-    #     raise HTTPException(status_code=401, detail="Invalid token header")
+ 
     token = auth_header
     if token.startswith("Bearer "):
         token = token.split("Bearer ")[1].strip() 

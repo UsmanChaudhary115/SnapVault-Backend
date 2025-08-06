@@ -251,6 +251,7 @@ test-results/
 config.py
 secrets.py
 local_config.py
+constants.py
 
 # Backup files
 *.bak

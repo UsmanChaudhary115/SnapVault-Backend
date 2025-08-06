@@ -1,4 +1,3 @@
-# utils/backBlaze_utils.py
 from constants import BACKBLAZE_ACCESS_KEY, BACKBLAZE_SECRET_KEY, BACKBLAZE_ENDPOINT, BACKBLAZE_BUCKET_NAME
 import boto3
 from botocore.client import Config

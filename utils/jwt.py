@@ -1,4 +1,4 @@
-from jose import JWTError, jwt
+from jose import jwt
 from datetime import datetime, timedelta
 from .config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_ACCESS_TOKEN_EXPIRE_MINUTES
 

@@ -1,17 +1,14 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from fastapi import APIRouter, Depends, status #type: ignore
 from sqlalchemy.orm import Session  #type: ignore
 from database import get_db
 from models.user import User 
 from models.group import Group
 from models.group_member import GroupMember
-from schemas.user import UserOut, UpdateUser
+from schemas.user import UserOut, UpdateUser, PasswordUpdate
 from utils.auth_utils import get_current_user 
-from email_validator import validate_email, EmailNotValidError
-from passlib.context import CryptContext 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
+from email_validator import validate_email, EmailNotValidError 
+from utils.hash import verify_password, hash_password
 
 
 router = APIRouter()
@@ -38,20 +35,21 @@ def update_email(updatedUser: UpdateUser, db: Session = Depends(get_db), current
  
     if not updatedUser.email:
         raise HTTPException(status_code=400, detail="Email is required")
-    
+    if not updatedUser.password:
+        raise HTTPException(status_code=400, detail="Current password is required")
     try:
-        validate_email(updatedUser.email)
+        validate_email(updatedUser.email, check_deliverability=False) # Validate email format without checking deliverability
     except EmailNotValidError:
         raise HTTPException(status_code=400, detail="Invalid email format")
     
-    updatedUser.email = updatedUser.email.strip().upper()
+    updatedUser.email = updatedUser.email.strip().lower()
     if(updatedUser.email == current_user.email):
         raise HTTPException(status_code=400, detail="New email cannot be the same as the current email")
 
     if db.query(User).filter(User.email == updatedUser.email).first():
         raise HTTPException(status_code=400, detail="Email already exists")
     
-    if not pwd_context.verify(updatedUser.password, current_user.hashed_password):
+    if not verify_password(updatedUser.password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
      
     
@@ -59,6 +57,8 @@ def update_email(updatedUser: UpdateUser, db: Session = Depends(get_db), current
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
 @router.delete("/delete", status_code=status.HTTP_200_OK)
 def delete_user(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)): 
     owned_memberships = db.query(GroupMember).filter_by(user_id=current_user.id, role_id=1).all()
@@ -79,3 +79,33 @@ def delete_user(db: Session = Depends(get_db), current_user: User = Depends(get_
     db.commit()
 
     return {"message": "User, created groups, and memberships deleted successfully."}
+
+
+@router.put("/update-password")
+def update_password(
+    data: PasswordUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+        # Checking if current password is correct  
+        if not verify_password(data.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+
+        # Preventing reuse of old password
+        if verify_password(data.new_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from the current password"
+            )
+ 
+
+        # Hashing and updating the new password
+        hashed_new_password = hash_password(data.new_password)
+        current_user.hashed_password = hashed_new_password
+        db.commit()
+        db.refresh(current_user)
+
+        return {"message": "Password updated successfully"}

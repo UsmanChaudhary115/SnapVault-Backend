@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal 
 from routes import auth, group, photo, user 
 from utils.seed_db import seed_roles, seed_group_claims, seed_group_role_claims
-import os
 
 
 

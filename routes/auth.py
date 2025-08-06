@@ -1,16 +1,15 @@
 from email_validator import validate_email, EmailNotValidError
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from constants import THRESHOLD, UPLOAD_PROFILE_DIR
+from constants import THRESHOLD
 from database import get_db
 from models.faces import Face
 from models.user import User
 from models.revoked_token import RevokedToken
-from schemas.user import UserLogin, UserOut, PasswordUpdate
+from schemas.user import UserLogin, UserOut
 from utils.hash import hash_password, verify_password
 from utils.jwt import create_access_token
-from utils.auth_utils import get_current_user
-from passlib.context import CryptContext   
+from utils.auth_utils import get_current_user   
 from sqlalchemy.exc import SQLAlchemyError 
 import cv2, uuid, json, os
 import numpy as np  
@@ -18,7 +17,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from insightface.app import FaceAnalysis
 import boto3 
 from utils.backBlaze_utils import s3_client
-from constants import BACKBLAZE_ACCESS_KEY, BACKBLAZE_SECRET_KEY, BACKBLAZE_ENDPOINT, BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
+from constants import BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
 
 face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
@@ -157,36 +156,6 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     
     token = create_access_token({"sub": db_user.email})
     return {"access_token": token, "token_type": "bearer"}
-
-
-@router.put("/update-password")
-def update_password(
-    data: PasswordUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-        # Checking if current password is correct  
-        if not verify_password(data.current_password, current_user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Current password is incorrect"
-            )
-
-        # Preventing reuse of old password
-        if verify_password(data.new_password, current_user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="New password must be different from the current password"
-            )
- 
-
-        # Hashing and updating the new password
-        hashed_new_password = hash_password(data.new_password)
-        current_user.hashed_password = hashed_new_password
-        db.commit()
-        db.refresh(current_user)
-
-        return {"message": "Password updated successfully"}
 
 
 @router.post("/logout")

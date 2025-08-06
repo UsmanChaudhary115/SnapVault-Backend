@@ -43,8 +43,7 @@ onnxruntime
 opencv-python-headless==4.12.0.88
 opencv-contrib-python==4.11.0.86
 imageio==2.37.0
-pillow==11.2.1
-mediapipe==0.10.21
+pillow==11.2.1 
 facexlib==0.3.0
 scikit-learn==1.7.1
 scipy==1.15.3

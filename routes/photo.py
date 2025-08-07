@@ -21,10 +21,12 @@ from utils.auth_utils import authorize
 from constants import *
 from utils.highlight_utils import evaluate_image_quality 
 from utils.backBlaze_utils import s3_client, generate_presigned_url
- 
 
-face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
+
+face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0)
+#face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
+#face_app.prepare(ctx_id=0)
 
 router = APIRouter()
 

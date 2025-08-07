@@ -14,7 +14,8 @@ from utils.auth_utils import get_current_user
 from email_validator import validate_email, EmailNotValidError 
 from utils.backBlaze_utils import generate_presigned_url
 from utils.hash import verify_password, hash_password
-
+from utils.backBlaze_utils import s3_client
+from constants import BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
 
 router = APIRouter()
 @router.put("/bio/{updatedBio}", response_model=UserOut)
@@ -80,9 +81,13 @@ def delete_user(db: Session = Depends(get_db), current_user: User = Depends(get_
     remaining_groups = db.query(GroupMember).filter(GroupMember.user_id == current_user.id, ~GroupMember.group_id.in_(owned_group_ids)).all()
     for membership in remaining_groups:
         db.delete(membership)
- 
+    
     db.delete(current_user)
     db.commit()
+    try:
+        s3_client.delete_object(Bucket=BACKBLAZE_BUCKET_NAME, Key=current_user.profile_picture)
+    except Exception as e:
+        print(f"Failed to delete profile picture from S3: {e}")
 
     return {"message": "User, created groups, and memberships deleted successfully."}
 

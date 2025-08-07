@@ -19,10 +19,9 @@ from utils.backBlaze_utils import s3_client
 from constants import BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
  
 #face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
-# face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
-# face_app.prepare(ctx_id=0)
-face_app = FaceAnalysis(name='buffalo_l')
-face_app.prepare(ctx_id=0, det_size=(640, 640))
+face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+face_app.prepare(ctx_id=0)
+
 
  
 router = APIRouter()   

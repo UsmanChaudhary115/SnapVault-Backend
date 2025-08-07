@@ -1,5 +1,4 @@
 [phases.setup]
 pkgs = ["python310"]
 [build]
-nixpacksVersion = "1.17.0"
-buildCommand = "./build.sh"
+nixpacksVersion = "1.17.0" 

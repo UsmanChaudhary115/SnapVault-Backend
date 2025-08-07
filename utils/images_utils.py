@@ -9,11 +9,9 @@ from utils.highlight_utils import evaluate_image_quality
 from insightface.app import FaceAnalysis
 
 
-# face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
-# face_app.prepare(ctx_id=0) 
+face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+face_app.prepare(ctx_id=0) 
 
-face_app = FaceAnalysis(name='buffalo_l')
-face_app.prepare(ctx_id=0, det_size=(640, 640))
 def process_faces(photo_id: int, img_bytes: bytes, group_id: int, db_session_maker=SessionLocal):
     db: Session = db_session_maker()
     try:

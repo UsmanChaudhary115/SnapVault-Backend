@@ -100,8 +100,7 @@ def get_group(
         group_id=group.id
     ).first()
     if not membership:
-        raise HTTPException(status_code=403, detail="You are not authorized to view group details")
-    group.number_of_members = db.query(GroupMember).filter(GroupMember.group_id == group.id).count()
+        raise HTTPException(status_code=403, detail="You are not authorized to view group details") 
     return group
 
 @router.get("/{id}/members")
@@ -256,7 +255,7 @@ def transfer_group_ownership(
     previous_super_admin.role_id = ROLE_RESTRICTED_VIEWER       # Previous super-admin becomes Restricted-Viewer
 
     db.commit()
-    return {"message": f"Ownership of group has been transferred to {user.name} successfully."}
+    return {"message": f"Ownership of group has been transferred to {new_owner_as_user.name} successfully."}
 
 @router.put("/{id}/deactivate")
 def deactivate_group(

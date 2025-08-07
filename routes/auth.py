@@ -15,7 +15,6 @@ import cv2, uuid, json, os
 import numpy as np  
 from sklearn.metrics.pairwise import cosine_similarity 
 from insightface.app import FaceAnalysis
-import boto3 
 from utils.backBlaze_utils import s3_client
 from constants import BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
  

@@ -1,51 +1,40 @@
-# FastAPI & Server
 fastapi==0.115.13
 uvicorn[standard]==0.34.3
-
-# Database & ORM
+ 
 SQLAlchemy==2.0.41
 alembic==1.16.4
 psycopg2-binary==2.9.10
-
-# Pydantic & Validation
-pydantic
+ 
+# pydantic
 email_validator==2.2.0
-
-# Auth & Security
-passlib[bcrypt]==1.7.4
-bcrypt==3.2.2
+ 
+passlib[bcrypt]==1.7.4 
 python-jose[cryptography]==3.5.0
 python-multipart==0.0.20
-python-dotenv==1.1.0
+# python-dotenv==1.1.0
+ 
+# #httpx
+# #aiofiles
+# #requests==2.32.4
+# #tqdm==4.67.1
 
-# HTTP Clients & File Uploads
-httpx
-aiofiles
-requests==2.32.4
-tqdm==4.67.1
-
-# Supabase & Storage
-supabase==2.16.0
-gotrue==2.12.3
-postgrest==1.1.1
-realtime==2.5.3
-storage3==0.12.0
+# # Supabase & Storage
+# supabase==2.16.0
+# #gotrue==2.12.3
+# postgrest==1.1.1
+# #realtime==2.5.3
+# #storage3==0.12.0
 
 # AWS S3 (Backblaze B2 compatible)
 boto3==1.40.3
-botocore==1.40.3
-s3transfer==0.13.1
-
-# AI / Face Recognition / CV
-numpy==2.2.6
+ 
+# numpy==2.2.6
 insightface==0.7.2
 onnxruntime 
 opencv-python-headless==4.12.0.88 
-imageio==2.37.0
-pillow==11.2.1 
-facexlib==0.3.0
+# #imageio==2.37.0
+# pillow==11.2.1 
+# facexlib==0.3.0
 scikit-learn==1.7.1
-scipy==1.15.3
-matplotlib==3.10.3 
-# Miscellaneous  
-pandas==2.3.1
+# scipy==1.15.3    
+# #pandas==2.3.1 

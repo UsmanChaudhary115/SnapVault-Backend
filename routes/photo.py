@@ -1,37 +1,145 @@
 import json
 from typing import List
 import boto3
+from fastapi import BackgroundTasks
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, Path
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from constants import THRESHOLD, UPLOAD_DIR
-from database import get_db
-from models.group_member import GroupMember
-from models.photo_face import PhotoFace
-from models.user import User
-from models.group import Group
+from constants import SIMILARITY_THRESHOLD
+from database import get_db, SessionLocal 
 from utils.auth_utils import get_current_user
 from schemas.photo import PhotoOut
 import uuid, cv2
 import numpy as np  
-from models import Photo, GroupMember, Face  
+from models import Photo, GroupMember, Face, Group, User, PhotoFace
 from insightface.app import FaceAnalysis
 from sklearn.metrics.pairwise import cosine_similarity
 from utils.auth_utils import authorize
 from constants import *
 from utils.highlight_utils import evaluate_image_quality 
 from utils.backBlaze_utils import s3_client, generate_presigned_url
+from utils.images_utils import process_faces
 
 
-face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
-face_app.prepare(ctx_id=0)
-#face_app = FaceAnalysis(name='buffalo_l', root='D:/SnapVault-Backend/AI Models', providers=['CPUExecutionProvider'])
-#face_app.prepare(ctx_id=0)
+# face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+# face_app.prepare(ctx_id=0) 
 
 router = APIRouter()
 
+
+
+# @router.post("/upload", response_model=List[PhotoOut])
+# async def upload_photos(
+#     group_id: int = Form(...),
+#     files: List[UploadFile] = File(...),
+#     db: Session = Depends(get_db),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     member = db.query(GroupMember).filter_by(
+#         user_id=current_user.id,
+#         group_id=group_id
+#     ).first() 
+
+
+#     if not member:
+#         raise HTTPException(status_code=403, detail="You are not authorized to upload photos to this group.")
+#     group = db.query(Group).filter(Group.id == group_id).first()
+#     if not group:
+#         raise HTTPException(status_code=404, detail="Group not found")
+#     claims = authorize(member.role_id, db)
+#     if not any(claim.id == CLAIM_UPLOAD_PHOTOS for claim in claims):
+#         raise HTTPException(status_code=403, detail="You are not authorized to upload photos to this group.")
+
+#     photos_out = []
+
+#     for file in files:
+#         ext = file.filename.split('.')[-1].lower()
+#         if ext not in ['jpg', 'jpeg', 'png']:
+#             raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.")
+        
+#         filename = f"groups/{group.name}/{uuid.uuid4()}.{ext}" 
+#         file_content = await file.read()
+#         file_bytes = np.asarray(bytearray(file_content), dtype=np.uint8)
+#         img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR) 
+
+#         try:
+#             s3_client.put_object(
+#                 Bucket=BACKBLAZE_BUCKET_NAME,
+#                 Key=filename,
+#                 Body=file_content,
+#                 ContentType=file.content_type
+#          )
+#         except Exception as e:
+#             raise HTTPException(status_code=500, detail=f"Internal server error")
+
+#         faces = face_app.get(img)
+#         face_present = True
+#         if not faces or len(faces) == 0:
+#             face_present = False
+#             highlight_status = False
+#         else:
+#             score = evaluate_image_quality(faces, img)
+#             highlight_status = (score >= HIGHLIGHT_THRESHOLD)
+#         # Add photo entry
+#         photo = Photo(
+#             group_id=group_id,
+#             uploader_id=current_user.id,
+#             file_path=filename,
+#             isHighlighted=highlight_status
+#         )
+#         db.add(photo)
+#         db.commit()
+#         db.refresh(photo)
+#         photos_out.append(photo)
+
+#         # Detecting faces, if any face is present, then add it to the database 
+#         if face_present == False:
+#             continue
+
+#         all_faces = db.query(Face).all()
+
+#         for face in faces:
+#             embedding = face.embedding  # numpy array
+
+#             found_match = False
+#             for existing in all_faces:
+#                 existing_embedding = np.array(json.loads(existing.embedding), dtype=np.float32)
+#                 sim = cosine_similarity([embedding], [existing_embedding])[0][0]
+#                 if sim >= SIMILARITY_THRESHOLD:
+#                     # Update embedding by averaging
+#                     new_embedding = (embedding + existing_embedding) / 2
+#                     existing.embedding = json.dumps(new_embedding.tolist())
+#                     existing.embedding_count += 1
+#                     db.commit()
+
+#                     # Create association record linking this face with current photo
+#                     association = PhotoFace(photo_id=photo.id, face_id=existing.id)
+#                     db.add(association)
+#                     db.commit()
+
+#                     found_match = True
+#                     break
+
+#             if not found_match:
+#                 # New face record
+#                 new_face = Face(
+#                     user_id=None,
+#                     embedding=json.dumps(embedding.tolist())
+#                 )
+#                 db.add(new_face)
+#                 db.commit()
+#                 db.refresh(new_face)
+
+#                 # Link new face with current photo
+#                 association = PhotoFace(photo_id=photo.id, face_id=new_face.id)
+#                 db.add(association)
+#                 db.commit()
+
+#     return photos_out
+
+
 @router.post("/upload", response_model=List[PhotoOut])
 async def upload_photos(
+    background_tasks: BackgroundTasks,
     group_id: int = Form(...),
     files: List[UploadFile] = File(...),
     db: Session = Depends(get_db),
@@ -60,9 +168,7 @@ async def upload_photos(
             raise HTTPException(status_code=400, detail="Only JPG, JPEG, PNG allowed.")
         
         filename = f"groups/{group.name}/{uuid.uuid4()}.{ext}" 
-        file_content = await file.read()
-        file_bytes = np.asarray(bytearray(file_content), dtype=np.uint8)
-        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR) 
+        file_content = await file.read() 
 
         try:
             s3_client.put_object(
@@ -74,70 +180,30 @@ async def upload_photos(
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal server error")
 
-        faces = face_app.get(img)
-        face_present = True
-        if not faces or len(faces) == 0:
-            face_present = False
-            highlight_status = False
-        else:
-            score = evaluate_image_quality(faces, img)
-            highlight_status = (score >= HIGHLIGHT_THRESHOLD)
         # Add photo entry
         photo = Photo(
             group_id=group_id,
             uploader_id=current_user.id,
-            file_path=filename,
-            isHighlighted=highlight_status
+            file_path=filename
         )
         db.add(photo)
         db.commit()
         db.refresh(photo)
         photos_out.append(photo)
-
-        # Detecting faces, if any face is present, then add it to the database 
-        if face_present == False:
-            continue
-
-        all_faces = db.query(Face).all()
-
-        for face in faces:
-            embedding = face.embedding  # numpy array
-
-            found_match = False
-            for existing in all_faces:
-                existing_embedding = np.array(json.loads(existing.embedding), dtype=np.float32)
-                sim = cosine_similarity([embedding], [existing_embedding])[0][0]
-                if sim >= THRESHOLD:
-                    # Update embedding by averaging
-                    new_embedding = (embedding + existing_embedding) / 2
-                    existing.embedding = json.dumps(new_embedding.tolist())
-                    existing.embedding_count += 1
-                    db.commit()
-
-                    # Create association record linking this face with current photo
-                    association = PhotoFace(photo_id=photo.id, face_id=existing.id)
-                    db.add(association)
-                    db.commit()
-
-                    found_match = True
-                    break
-
-            if not found_match:
-                # New face record
-                new_face = Face(
-                    user_id=None,
-                    embedding=json.dumps(embedding.tolist())
-                )
-                db.add(new_face)
-                db.commit()
-                db.refresh(new_face)
-
-                # Link new face with current photo
-                association = PhotoFace(photo_id=photo.id, face_id=new_face.id)
-                db.add(association)
-                db.commit()
+        
+        
+        background_tasks.add_task(
+            process_faces,
+            photo_id=photo.id,
+            img_bytes=file_content,
+            group_id=group_id,
+            db_session_maker=SessionLocal
+        )
 
     return photos_out
+
+
+
 
 @router.get("/group/{group_id}", response_model=list[PhotoOut])
 def get_group_photos(group_id: int = Path(..., gt=0), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):

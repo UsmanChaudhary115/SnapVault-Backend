@@ -1,7 +1,7 @@
 from email_validator import validate_email, EmailNotValidError
 from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from constants import THRESHOLD
+from constants import SIMILARITY_THRESHOLD
 from database import get_db
 from models.faces import Face
 from models.user import User
@@ -53,7 +53,7 @@ async def register(
     if len(file_content) > MAX_FILE_SIZE_BYTES_PROFILE_PICTURE:
         raise HTTPException(
             status_code=400,
-            detail=f"File too large. Max size is {MAX_FILE_SIZE_BYTES_PROFILE_PICTURE} MB."
+            detail=f"File too large. Max size is 2 MB."
         )
 
     # Use OpenCV to process the image directly from memory 
@@ -102,7 +102,7 @@ async def register(
                 stored_embedding = np.array(json.loads(face_record.embedding))
                 sim_score = cosine_similarity([new_embedding], [stored_embedding])[0][0]
 
-                if sim_score >= THRESHOLD:
+                if sim_score >= SIMILARITY_THRESHOLD:
                     #Trying to prevent face duplication
                     if face_record.user_id is not None:
                         raise HTTPException(

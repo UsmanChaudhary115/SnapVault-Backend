@@ -22,10 +22,7 @@ CLAIM_UPLOAD_PHOTOS = 13
 CLAIM_DELETE_PHOTOS = 14
 
 
-#other constants
-UPLOAD_PROFILE_DIR = "uploads/profile_pictures" 
-THRESHOLD = 0.6
-UPLOAD_DIR = "uploads/photos"
+ 
 
 
 # Backblaze B2 Configuration
@@ -41,3 +38,4 @@ MAX_FILE_SIZE_BYTES_PROFILE_PICTURE = 2 * 1024 * 1024
 
 # Highlighting Constants
 HIGHLIGHT_THRESHOLD = 3.0
+SIMILARITY_THRESHOLD = 0.6 

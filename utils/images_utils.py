@@ -11,7 +11,8 @@ from insightface.app import FaceAnalysis
 
 
 
-face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+#face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
 face_app.prepare(ctx_id=0) 
 
 def process_faces(photo_id: int, img_bytes: bytes, group_id: int, db_session_maker=SessionLocal):

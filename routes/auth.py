@@ -18,9 +18,10 @@ from insightface.app import FaceAnalysis
 from utils.backBlaze_utils import s3_client
 from constants import BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
  
-face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
-face_app.prepare(ctx_id=0) 
-
+# face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+# face_app.prepare(ctx_id=0) 
+face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+face_app.prepare(ctx_id=0)
 
 router = APIRouter()   
 

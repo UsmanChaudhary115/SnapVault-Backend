@@ -13,13 +13,12 @@ from utils.auth_utils import get_current_user
 from sqlalchemy.exc import SQLAlchemyError 
 import cv2, uuid, json, os
 import numpy as np  
-from sklearn.metrics.pairwise import cosine_similarity 
-from insightface.app import FaceAnalysis
+from sklearn.metrics.pairwise import cosine_similarity  
 from utils.backBlaze_utils import s3_client
 from constants import BACKBLAZE_BUCKET_NAME, MAX_FILE_SIZE_BYTES_PROFILE_PICTURE
- 
-face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
-face_app.prepare(ctx_id=0) 
+from face_app_singleton import face_app
+# face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+# face_app.prepare(ctx_id=0) 
 
 
 router = APIRouter()   

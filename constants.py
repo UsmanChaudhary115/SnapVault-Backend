@@ -33,7 +33,7 @@ BACKBLAZE_BUCKET_NAME = 'SnapVault-Storage'
 
 
 # File Size Limit for profile picture
-MAX_FILE_SIZE_BYTES_PROFILE_PICTURE = 2 * 1024 * 1024
+MAX_FILE_SIZE_BYTES_PROFILE_PICTURE = 20 * 1024 * 1024
 
 
 # Highlighting Constants

@@ -7,13 +7,13 @@ from database import SessionLocal
 from models import Photo, Face, PhotoFace  
 from constants import HIGHLIGHT_THRESHOLD, SIMILARITY_THRESHOLD 
 from utils.highlight_utils import evaluate_image_quality 
-from insightface.app import FaceAnalysis
+# from insightface.app import FaceAnalysis
+from face_app_singleton import face_app
 
 
-
-face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
-#face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
-face_app.prepare(ctx_id=0) 
+# face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
+# #face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+# face_app.prepare(ctx_id=0) 
 
 def process_faces(photo_id: int, img_bytes: bytes, group_id: int, db_session_maker=SessionLocal):
     db: Session = db_session_maker()

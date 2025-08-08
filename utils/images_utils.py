@@ -1,3 +1,4 @@
+import os
 from sqlalchemy.orm import Session
 import numpy as np
 import json, cv2
@@ -7,6 +8,7 @@ from models import Photo, Face, PhotoFace
 from constants import HIGHLIGHT_THRESHOLD, SIMILARITY_THRESHOLD 
 from utils.highlight_utils import evaluate_image_quality 
 from insightface.app import FaceAnalysis
+
 
 
 face_app = FaceAnalysis(name='buffalo_l', root='./AI Models', providers=['CPUExecutionProvider'])
